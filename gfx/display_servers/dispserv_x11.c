@@ -98,6 +98,7 @@ static bool x11_display_server_set_resolution(void *data,
       int center, int monitor_index, int xoffset, int padjust)
 {
    unsigned char interlace = 0, ret;
+   const char* err_msg;
    LIBTYPE dlp = OPENLIB(LIBSWR);
 
    if (!dlp) {
@@ -115,10 +116,10 @@ static bool x11_display_server_set_resolution(void *data,
       CLOSELIB(dlp);
       //exit(EXIT_FAILURE);
    }
-
+   
 	printf("Init a new switchres_manager object:\n");
 	SRobj->init();
-
+   sr_mode srm;
    printf("Orignial resolution expected: %dx%d@%f-%d\n", width, height, hz, interlace);
 
    ret = SRobj->sr_add_mode(width, height, hz, interlace, &srm);
@@ -130,7 +131,7 @@ static bool x11_display_server_set_resolution(void *data,
 	}
 	printf("Got resolution: %dx%d%c@%f\n", srm.width, srm.height, srm.interlace, srm.refresh);
 
-   ret = SRobj->sr_switch_to_mode(srm.width, srm.height, rr, srm.interlace, &srm);
+   ret = SRobj->sr_switch_to_mode(srm.width, srm.height, srm.refresh, srm.interlace, &srm);
 	if(!ret) 
 	{
 		printf("ERROR: couldn't switch to the required mode. Exiting!\n");
