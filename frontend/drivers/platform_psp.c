@@ -30,7 +30,6 @@
 #include <psp2/apputil.h>
 
 #include "../../bootstrap/vita/sbrk.c"
-#include "../../bootstrap/vita/threading.c"
 
 #else
 #include <pspkernel.h>
@@ -90,14 +89,14 @@ static void frontend_psp_get_environment_settings(int *argc, char *argv[],
    (void)args;
 
 #ifdef VITA
-   strlcpy(eboot_path, "app0:/", sizeof(eboot_path));
+   strcpy_literal(eboot_path, "app0:/");
    strlcpy(g_defaults.dirs[DEFAULT_DIR_PORT], eboot_path, sizeof(g_defaults.dirs[DEFAULT_DIR_PORT]));
-   strlcpy(user_path, "ux0:/data/retroarch/", sizeof(user_path));
+   strcpy_literal(user_path, "ux0:/data/retroarch/");
 #else
    strlcpy(eboot_path, argv[0], sizeof(eboot_path));
    /* for PSP, use uppercase directories, and no trailing slashes
       otherwise mkdir fails */
-   strlcpy(user_path, "ms0:/PSP/RETROARCH", sizeof(user_path));
+   strcpy_literal(user_path, "ms0:/PSP/RETROARCH");
    fill_pathname_basedir(g_defaults.dirs[DEFAULT_DIR_PORT], argv[0], sizeof(g_defaults.dirs[DEFAULT_DIR_PORT]));
 #endif
    RARCH_LOG("port dir: [%s]\n", g_defaults.dirs[DEFAULT_DIR_PORT]);
@@ -218,14 +217,9 @@ static void frontend_psp_get_environment_settings(int *argc, char *argv[],
          RARCH_LOG("Auto-start game %s.\n", argv[1]);
       }
    }
-#endif
 
-   for (i = 0; i < DEFAULT_DIR_LAST; i++)
-   {
-      const char *dir_path = g_defaults.dirs[i];
-      if (!string_is_empty(dir_path))
-         path_mkdir(dir_path);
-   }
+   dir_check_defaults("custom.ini");
+#endif
 }
 
 static void frontend_psp_deinit(void *data)
@@ -346,13 +340,43 @@ static void frontend_psp_exec(const char *path, bool should_load_game)
    sceAppMgrGetAppParam(boot_params);
    if (strstr(boot_params,"psgm:play"))
    {
-      int ret;
-      char *param1 = strstr(boot_params, "&param=")+7;
+      char *param1 = strstr(boot_params, "&param=");
       char *param2 = strstr(boot_params, "&param2=");
-      memcpy(core_name, param1, param2 - param1);
-      core_name[param2-param1] = 0;
-      sprintf(argp, param2 + 8);
-      ret = sceAppMgrLoadExec(core_name, (char * const*)((const char*[]){argp, 0}), NULL);
+
+      /* copy path to core_name for normal boot */
+      strlcpy(core_name, path, sizeof(core_name));
+
+      if (param1 != NULL && param2 != NULL)
+      {
+         if (param2 > param1 && (param2 - (param1+7) < sizeof(core_name)) && strlen(param2+8) < sizeof(argp))
+         {
+            /* handle case where param2 follows param1 */
+            param1 += 7;
+            memcpy(core_name, param1, param2 - param1);
+            core_name[param2-param1] = 0;
+            sprintf(argp, param2 + 8);
+            args = strlen(argp);
+         }
+         else if (param1 > param2 && (param1 - (param2+8) < sizeof(argp)) && strlen(param1+7) < sizeof(core_name))
+         {
+            /* handle case where param1 follows param2 */
+            param2 += 8;
+            memcpy(argp, param2, param1 - param2);
+            argp[param1-param2] = 0;
+            sprintf(core_name, param1 + 7);
+            args = strlen(argp);
+         }
+         else
+         {
+            RARCH_LOG("Boot params are too long. Continue normal boot.");
+         }
+      }
+      else
+      {
+         RARCH_LOG("Required boot params missing. Continue nornal boot.");
+      }
+      
+      int ret =  sceAppMgrLoadExec(core_name, args == 0 ? NULL : (char * const*)((const char*[]){argp, 0}), NULL);
       RARCH_LOG("Attempt to load executable: [%d].\n", ret);
    }
    else
@@ -616,6 +640,8 @@ frontend_ctx_driver_t frontend_ctx_psp = {
    NULL,                         /* destroy_sighandler_state */
    NULL,                         /* attach_console */
    NULL,                         /* detach_console */
+   NULL,                         /* get_lakka_version */
+   NULL,                         /* set_screen_brightness */
    NULL,                         /* watch_path_for_changes */
    NULL,                         /* check_for_path_changes */
    NULL,                         /* set_sustained_performance_mode */

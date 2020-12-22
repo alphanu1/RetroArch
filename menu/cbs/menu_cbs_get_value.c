@@ -35,9 +35,9 @@
 #include "../../core_info.h"
 #include "../../configuration.h"
 #include "../../file_path_special.h"
-#include "../../managers/core_option_manager.h"
+#include "../../core_option_manager.h"
 #ifdef HAVE_CHEATS
-#include "../../managers/cheat_manager.h"
+#include "../../cheat_manager.h"
 #endif
 #include "../../performance_counters.h"
 #include "../../paths.h"
@@ -412,7 +412,7 @@ static void menu_action_setting_disp_set_label_menu_file_core(
       char *s2, size_t len2)
 {
    const char *alt = NULL;
-   strlcpy(s, "(CORE)", len);
+   strcpy_literal(s, "(CORE)");
 
    menu_entries_get_at_offset(list, i, NULL,
          NULL, NULL, NULL, &alt);
@@ -463,12 +463,12 @@ static void menu_action_setting_disp_set_label_core_updater_entry(
          /* Highlight locked cores */
          if (core_info.inf->is_locked)
          {
-            strlcpy(s, "[#!]", len);
+            strcpy_literal(s, "[#!]");
             *w = (unsigned)STRLEN_CONST("[#!]");
          }
          else
          {
-            strlcpy(s, "[#]", len);
+            strcpy_literal(s, "[#]");
             *w = (unsigned)STRLEN_CONST("[#]");
          }
       }
@@ -506,7 +506,7 @@ static void menu_action_setting_disp_set_label_core_manager_entry(
    if (core_info_find(&core_info) &&
        core_info.inf->is_locked)
    {
-      strlcpy(s, "[!]", len);
+      strcpy_literal(s, "[!]");
       *w = (unsigned)STRLEN_CONST("[!]");
    }
 }
@@ -571,7 +571,7 @@ static void menu_action_setting_disp_set_label_input_desc(
       descriptor = 
          runloop_get_system_info()->input_desc_btn[user_idx][remap_idx];
 
-   strlcpy(s, "---", len);
+   strcpy_literal(s, "---");
 
    if (!string_is_empty(descriptor))
    {
@@ -622,7 +622,7 @@ static void menu_action_setting_disp_set_label_input_desc_kbd(
       strlcpy(s, desc, len);
    }
    else
-      strlcpy(s, "---", len);
+      strcpy_literal(s, "---");
 
    *w = 19;
    strlcpy(s2, path, len2);
@@ -707,13 +707,14 @@ static void general_disp_set_label_perf_counters(
       const char *path, unsigned *w
       )
 {
+   gfx_animation_t *p_anim     = anim_get_ptr();
    *s = '\0';
    *w = 19;
    strlcpy(s2, path, len2);
 
    menu_action_setting_disp_set_label_perf_counters_common(
          counters, offset, s, len);
-   gfx_animation_ctl(MENU_ANIMATION_CTL_SET_ACTIVE, NULL);
+   GFX_ANIMATION_CLEAR_ACTIVE(p_anim);
 }
 
 static void menu_action_setting_disp_set_label_perf_counters(
@@ -885,7 +886,7 @@ static void menu_action_setting_disp_set_label_menu_video_resolution(
    {
 #ifdef GEKKO
       if (width == 0 || height == 0)
-         strlcpy(s, "DEFAULT", len);
+         strcpy_literal(s, "DEFAULT");
       else
 #endif
          snprintf(s, len, "%ux%u", width, height);
@@ -1130,10 +1131,10 @@ static void menu_action_setting_disp_set_label_core_option_create(
    *s = '\0';
    *w = 19;
 
-   strlcpy(s, "", len);
+   strcpy_literal(s, "");
 
    if (!string_is_empty(path_get(RARCH_PATH_BASENAME)))
-      strlcpy(s,  path_basename(path_get(RARCH_PATH_BASENAME)), len);
+      strlcpy(s, path_basename(path_get(RARCH_PATH_BASENAME)), len);
 
    strlcpy(s2, path, len2);
 }

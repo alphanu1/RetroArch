@@ -283,6 +283,7 @@ static void frontend_gx_get_environment_settings(
       }
    }
 #endif
+   dir_check_defaults("custom.ini");
 #endif
 }
 
@@ -562,6 +563,8 @@ frontend_ctx_driver_t frontend_ctx_gx = {
    NULL,                            /* destroy_signal_handler_state */
    NULL,                            /* attach_console */
    NULL,                            /* detach_console */
+   NULL,                            /* get_lakka_version */
+   NULL,                            /* set_screen_brightness */
    NULL,                            /* watch_path_for_changes */
    NULL,                            /* check_for_path_changes */
    NULL,                            /* set_sustained_performance_mode */

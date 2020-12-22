@@ -57,8 +57,6 @@
 #endif
 #endif
 
-#define JSON_STATIC 1 /* must come before runtime_file, netplay_room_parse and jsonsax_full */
-
 #if _MSC_VER && !defined(__WINRT__)
 #include "../libretro-common/compat/compat_snprintf.c"
 #endif
@@ -193,7 +191,6 @@ ACHIEVEMENTS
 #include "../libretro-common/net/net_http.c"
 #endif
 
-#include "../libretro-common/formats/json/jsonsax.c"
 #include "../libretro-common/formats/cdfs/cdfs.c"
 #include "../network/net_http_special.c"
 
@@ -230,7 +227,7 @@ MD5
 CHEATS
 ============================================================ */
 #ifdef HAVE_CHEATS
-#include "../managers/cheat_manager.c"
+#include "../cheat_manager.c"
 #endif
 #include "../libretro-common/hash/rhash.c"
 
@@ -265,9 +262,7 @@ VIDEO CONTEXT
 
 #endif
 
-#if defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
-#include "../gfx/drivers_context/ps3_ctx.c"
-#elif defined(ANDROID)
+#if defined(ANDROID)
 #include "../gfx/drivers_context/android_ctx.c"
 #if defined(HAVE_VULKAN)
 #include "../gfx/drivers_context/android_vk_ctx.c"
@@ -574,6 +569,7 @@ FONTS
 ============================================================ */
 
 #include "../gfx/drivers_font_renderer/bitmapfont.c"
+#include "../gfx/drivers_font_renderer/bitmapfont_10x10.c"
 #include "../gfx/font_driver.c"
 
 #if defined(HAVE_D3D9) && defined(HAVE_D3DX)
@@ -685,13 +681,8 @@ INPUT
 
 #include "../input/input_autodetect_builtin.c"
 
-#if defined(__CELLOS_LV2__)
-#ifdef __PSL1GHT__
+#if defined(__PSL1GHT__)
 #include "../input/drivers/psl1ght_input.c"
-#else
-#include "../input/drivers/ps3_input.c"
-#include "../input/drivers_joypad/ps3_joypad.c"
-#endif
 #elif defined(SN_TARGET_PSP2) || defined(PSP) || defined(VITA)
 #include "../input/drivers/psp_input.c"
 #include "../input/drivers_joypad/psp_joypad.c"
@@ -743,6 +734,9 @@ INPUT
 #elif defined(__WINRT__)
 #include "../input/drivers/xdk_xinput_input.c"
 #include "../input/drivers/uwp_input.c"
+#elif defined(DINGUX) && defined(HAVE_SDL_DINGUX)
+#include "../input/drivers/sdl_dingux_input.c"
+#include "../input/drivers_joypad/sdl_dingux_joypad.c"
 #endif
 
 #ifdef HAVE_WAYLAND
@@ -776,6 +770,20 @@ INPUT
 #ifdef HAVE_UDEV
 #include "../input/drivers/udev_input.c"
 #include "../input/drivers_joypad/udev_joypad.c"
+#endif
+
+#if defined(HAVE_LIBSHAKE)
+#if TARGET_OS_OSX
+#include "../deps/libShake/src/common/error.c"
+#include "../deps/libShake/src/common/helpers.c"
+#include "../deps/libShake/src/common/presets.c"
+#include "../deps/libShake/src/osx/shake.c"
+#elif defined(__linux__) || (defined(BSD) && !defined(__MACH__))
+#include "../deps/libShake/src/common/error.c"
+#include "../deps/libShake/src/common/helpers.c"
+#include "../deps/libShake/src/common/presets.c"
+#include "../deps/libShake/src/linux/shake.c"
+#endif
 #endif
 
 /*============================================================
@@ -866,6 +874,10 @@ LEDS
 #include "../led/drivers/led_rpi.c"
 #endif
 
+#if defined(_WIN32) && !defined(_XBOX) && !defined(__WINRT__)
+#include "../led/drivers/led_win32_keyboard.c"
+#endif
+
 /*============================================================
 LOCATION
 ============================================================ */
@@ -884,7 +896,7 @@ RSOUND
 /*============================================================
 AUDIO
 ============================================================ */
-#if defined(__CELLOS_LV2__)
+#if defined(__PSL1GHT__)
 #include "../audio/drivers/ps3_audio.c"
 #elif defined(XENON)
 #include "../audio/drivers/xenon360_audio.c"
@@ -901,7 +913,9 @@ AUDIO
 #elif defined(_3DS)
 #include "../audio/drivers/ctr_csnd_audio.c"
 #include "../audio/drivers/ctr_dsp_audio.c"
+#ifdef HAVE_THREADS
 #include "../audio/drivers/ctr_dsp_thread_audio.c"
+#endif
 #endif
 
 #ifdef HAVE_XAUDIO
@@ -997,7 +1011,17 @@ FILTERS
 #include "../gfx/video_filters/lq2x.c"
 #include "../gfx/video_filters/phosphor2x.c"
 #include "../gfx/video_filters/normal2x.c"
+#include "../gfx/video_filters/normal2x_width.c"
+#include "../gfx/video_filters/normal2x_height.c"
+#include "../gfx/video_filters/normal4x.c"
 #include "../gfx/video_filters/scanline2x.c"
+#include "../gfx/video_filters/grid2x.c"
+#include "../gfx/video_filters/grid3x.c"
+#include "../gfx/video_filters/gameboy3x.c"
+#include "../gfx/video_filters/gameboy4x.c"
+#include "../gfx/video_filters/dot_matrix_3x.c"
+#include "../gfx/video_filters/dot_matrix_4x.c"
+#include "../gfx/video_filters/upscale_1_5x.c"
 #endif
 
 #ifdef HAVE_DSP_FILTER
@@ -1092,7 +1116,7 @@ CONFIGURATION
 STATE MANAGER
 ============================================================ */
 #ifdef HAVE_REWIND
-#include "../managers/state_manager.c"
+#include "../state_manager.c"
 #endif
 
 /*============================================================
@@ -1113,7 +1137,7 @@ FRONTEND
 #include "../frontend/drivers/platform_xdk.c"
 #endif
 
-#if defined(__CELLOS_LV2__)
+#if defined(__PSL1GHT__)
 #include "../frontend/drivers/platform_ps3.c"
 #elif defined(GEKKO)
 #include "../frontend/drivers/platform_gx.c"
@@ -1140,6 +1164,10 @@ FRONTEND
 #include "../frontend/drivers/platform_unix.c"
 #elif defined(DJGPP)
 #include "../frontend/drivers/platform_dos.c"
+#endif
+
+#if defined(DINGUX)
+#include "../dingux/dingux_utils.c"
 #endif
 
 #include "../core_info.c"
@@ -1198,6 +1226,7 @@ RETROARCH
 #include "../intl/msg_hash_fa.c"
 #include "../intl/msg_hash_he.c"
 #include "../intl/msg_hash_ast.c"
+#include "../intl/msg_hash_fi.c"
 #endif
 
 #include "../intl/msg_hash_us.c"
@@ -1260,8 +1289,8 @@ THREAD
 #include "../audio/audio_thread_wrapper.c"
 #endif
 
-/* needed for both playlists and netplay lobbies */
-#include "../libretro-common/formats/json/jsonsax_full.c"
+/* needed for playlists, netplay lobbies and achievements */
+#include "../libretro-common/formats/json/rjson.c"
 
 /*============================================================
 NETPLAY
@@ -1343,16 +1372,13 @@ MENU
 #include "../gfx/widgets/gfx_widget_progress_message.c"
 #ifdef HAVE_CHEEVOS
 #include "../gfx/widgets/gfx_widget_achievement_popup.c"
+#include "../gfx/widgets/gfx_widget_leaderboard_display.c"
 #endif
 #include "../gfx/widgets/gfx_widget_load_content_animation.c"
 #endif
 
 #ifdef HAVE_MENU
 #include "../menu/menu_setting.c"
-
-#if defined(HAVE_NETWORKING)
-#include "../menu/menu_networking.c"
-#endif
 
 #include "../menu/cbs/menu_cbs_ok.c"
 #include "../menu/cbs/menu_cbs_cancel.c"
@@ -1635,7 +1661,7 @@ SSL
 #include "../deps/mbedtls/ssl_ticket.c"
 #include "../deps/mbedtls/ssl_tls.c"
 
-#include "../libretro-common/net/net_socket_ssl.c"
+#include "../libretro-common/net/net_socket_ssl_mbed.c"
 #endif
 #endif
 #endif

@@ -1260,6 +1260,8 @@ MSG_HASH(
    MENU_ENUM_SUBLABEL_VIDEO_SMOOTH,
    "Wendet einen leichten Weichzeichner auf das Bild an, um die Pixelkanten etwas abzurunden. Diese Option hat einen sehr geringen Einfluss auf die Leistung."
    )
+#if defined(DINGUX)
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_SHADER_DELAY,
    "Auto-Shader Verzögerung"
@@ -1386,10 +1388,6 @@ MSG_HASH(
    "Vollbildmodus"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_VIDEO_FULLSCREEN,
-   "Starte im Vollbildmodus. Kann zur Laufzeit geändert werden."
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_WINDOWED_FULLSCREEN,
    "Unechter Vollbildmodus (Windowed Fullscreen)"
    )
@@ -1437,10 +1435,6 @@ MSG_HASH(
    "Fensterposition und Größe merken"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_VIDEO_WINDOW_SAVE_POSITION,
-   "Fenstergröße und -position merken. Aktivierung hat Vorrang über Fenster Skalierung"
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_WINDOW_WIDTH,
    "Fensterbreite"
    )
@@ -1479,6 +1473,8 @@ MSG_HASH(
    MENU_ENUM_SUBLABEL_VIDEO_ASPECT_RATIO,
    "Gleitkomma-Wert für das Bild-Seitenverhältnis (Breite / Höhe). Wird verwendet, wenn das Seitenverhältnis auf 'Benutzerdefiniert' eingstellt ist."
    )
+#if defined(DINGUX)
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_VIEWPORT_CUSTOM_X,
    "X-Position des Bildes"
@@ -2009,6 +2005,8 @@ MSG_HASH(
    MENU_ENUM_LABEL_VALUE_ENABLE_DEVICE_VIBRATION,
    "Aktiviert Vibration für unterstützte Cores"
    )
+#if defined(DINGUX) && defined(HAVE_LIBSHAKE)
+#endif
 
 /* Settings > Input > Menu Controls */
 
@@ -2242,10 +2240,6 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_INPUT_META_OSK,
    "Bildschirmtastatur (Ein-/Ausschalten)"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_INPUT_META_OSK,
-   "Schaltet Bildschirmtastatur ein / aus"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_INPUT_META_FPS_TOGGLE,
@@ -2837,16 +2831,8 @@ MSG_HASH(
    "Wiederherstellen der Buffer Größe (MB)"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_REWIND_BUFFER_SIZE,
-   "Die Menge des Arbeitsspeichers (in MB) für den Rewind-Puffer zu reservieren. Dies zu erhöhen erhöht die Anzahl der Rewind-Historie."
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_REWIND_BUFFER_SIZE_STEP,
    "Wiederherstellen der Buffer Größe (MB)"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_REWIND_BUFFER_SIZE_STEP,
-   "Jedes Mal, wenn Sie die Rewind Puffergröße über dieses UI erhöhen oder verringern, ändert sich diese um diesen Betrag"
    )
 
 /* Settings > Frame Throttle > Frame Time Counter */
@@ -2930,24 +2916,12 @@ MSG_HASH(
    "Bildschirm-Overlay"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_ONSCREEN_OVERLAY_SETTINGS,
-   "Bezels und Steuerung auf dem Bildschirm anpassen"
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_ONSCREEN_VIDEO_LAYOUT_SETTINGS,
    "Video-Layout"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_ONSCREEN_VIDEO_LAYOUT_SETTINGS,
-   "Video-Layout anpassen"
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_ONSCREEN_NOTIFICATIONS_SETTINGS,
    "Bildschirm-Benachrichtigungen"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_ONSCREEN_NOTIFICATIONS_SETTINGS,
-   "Benachrichtigungen auf dem Bildschirm anpassen"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_ONSCREEN_NOTIFICATIONS_VIEWS_SETTINGS,
@@ -2965,10 +2939,6 @@ MSG_HASH(
    "Aktiviere Overlay"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_INPUT_OVERLAY_ENABLE,
-   "Aktiviere das Overlay."
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_INPUT_OVERLAY_HIDE_IN_MENU,
    "Overlay im Menü nicht anzeigen"
    )
@@ -2976,6 +2946,8 @@ MSG_HASH(
    MENU_ENUM_SUBLABEL_INPUT_OVERLAY_HIDE_IN_MENU,
    "Verberge das Overlay im Menü und zeige es wieder an, wenn das Menü verlassen wird."
    )
+#if defined(ANDROID)
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_INPUT_OVERLAY_SHOW_PHYSICAL_INPUTS,
    "Eingaben im Overlay anzeigen"
@@ -3016,16 +2988,6 @@ MSG_HASH(
    MENU_ENUM_SUBLABEL_OVERLAY_PRESET,
    "Wähle ein Overlay mit dem Dateibrowser aus."
    )
-MSG_HASH(
-   MENU_ENUM_LABEL_VALUE_OVERLAY_SCALE,
-   "Overlay-Skalierung"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_OVERLAY_SCALE,
-   "Skalierung aller Bedienelemente des Overlays."
-   )
-
-
 
 /* Settings > On-Screen Display > Video Layout */
 
@@ -3442,20 +3404,8 @@ MSG_HASH(
    "Rückspuleinstellungen anzeigen"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_CONTENT_SHOW_REWIND,
-   "Rückspuleinstellungsoption anzeigen/verstecken"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_CONTENT_SHOW_LATENCY,
-   "Latenzoptionen anzeigen/verstecken"
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_CONTENT_SHOW_LATENCY,
    "Latenzeinstellungen anzeigen"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_CONTENT_SHOW_OVERLAYS,
-   "Overlayoptionen anzeigen/verstecken"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_CONTENT_SHOW_OVERLAYS,
@@ -3797,10 +3747,6 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_ACCOUNTS_CHEEVOS_PASSWORD,
    "Passwort"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_CHEEVOS_PASSWORD,
-   "Gib das Passwort deines Errungenschaften-Kontos ein."
    )
 
 /* Settings > User > Accounts > YouTube */
@@ -4406,6 +4352,8 @@ MSG_HASH(
 
 /* Quick Menu > Shaders > Save */
 
+   
+
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_SHADER_PRESET_SAVE_AS,
    "Shader-Voreinstellung speichern unter..."
@@ -4458,10 +4406,6 @@ MSG_HASH(
 
 /* Quick Menu > Achievements */
 
-MSG_HASH(
-   MENU_ENUM_LABEL_VALUE_NO_ACHIEVEMENTS_TO_DISPLAY,
-   "Keine Errungenschaften vorhanden."
-   )
 
 /* Quick Menu > Information */
 
@@ -6381,10 +6325,6 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_SWITCH_GPU_PROFILE,
    "GPU Übertakten"
-   )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_SWITCH_GPU_PROFILE,
-   "Über- oder Untertakten der Switch GPU"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_SWITCH_BACKLIGHT_CONTROL,

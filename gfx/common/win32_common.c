@@ -870,9 +870,9 @@ static LRESULT CALLBACK wnd_proc_common(
             if (GetKeyState(VK_SHIFT)   & 0x80)
                mod |= RETROKMOD_SHIFT;
             if (GetKeyState(VK_CONTROL) & 0x80)
-               mod |=  RETROKMOD_CTRL;
+               mod |= RETROKMOD_CTRL;
             if (GetKeyState(VK_MENU)    & 0x80)
-               mod |=  RETROKMOD_ALT;
+               mod |= RETROKMOD_ALT;
             if (GetKeyState(VK_CAPITAL) & 0x81)
                mod |= RETROKMOD_CAPSLOCK;
             if (GetKeyState(VK_SCROLL)  & 0x81)
@@ -948,9 +948,9 @@ static LRESULT CALLBACK wnd_proc_common_internal(HWND hwnd,
             if (GetKeyState(VK_SHIFT)   & 0x80)
                mod |= RETROKMOD_SHIFT;
             if (GetKeyState(VK_CONTROL) & 0x80)
-               mod |=  RETROKMOD_CTRL;
+               mod |= RETROKMOD_CTRL;
             if (GetKeyState(VK_MENU)    & 0x80)
-               mod |=  RETROKMOD_ALT;
+               mod |= RETROKMOD_ALT;
             if (GetKeyState(VK_CAPITAL) & 0x81)
                mod |= RETROKMOD_CAPSLOCK;
             if (GetKeyState(VK_SCROLL)  & 0x81)
@@ -961,6 +961,14 @@ static LRESULT CALLBACK wnd_proc_common_internal(HWND hwnd,
             keysym             = (unsigned)wparam;
             /* fix key binding issues on winraw when 
              * DirectInput is not available */
+            switch (keysym)
+            {
+               /* Mod handling done in winraw_callback */
+               case VK_SHIFT:
+               case VK_CONTROL:
+               case VK_MENU:
+                  return 0;
+            }
 
             keycode = input_keymaps_translate_keysym_to_rk(keysym);
 
@@ -1039,9 +1047,9 @@ static LRESULT CALLBACK wnd_proc_common_dinput_internal(HWND hwnd,
             if (GetKeyState(VK_SHIFT)   & 0x80)
                mod |= RETROKMOD_SHIFT;
             if (GetKeyState(VK_CONTROL) & 0x80)
-               mod |=  RETROKMOD_CTRL;
+               mod |= RETROKMOD_CTRL;
             if (GetKeyState(VK_MENU)    & 0x80)
-               mod |=  RETROKMOD_ALT;
+               mod |= RETROKMOD_ALT;
             if (GetKeyState(VK_CAPITAL) & 0x81)
                mod |= RETROKMOD_CAPSLOCK;
             if (GetKeyState(VK_SCROLL)  & 0x81)
@@ -1054,6 +1062,13 @@ static LRESULT CALLBACK wnd_proc_common_dinput_internal(HWND hwnd,
                keysym |= 0x80;
 
             keycode = input_keymaps_translate_keysym_to_rk(keysym);
+            switch (keycode)
+            {
+               /* L+R Shift handling done in dinput_poll */
+               case RETROK_LSHIFT:
+               case RETROK_RSHIFT:
+                  return 0;
+            }
 
             input_keyboard_event(keydown, keycode,
                   0, mod, RETRO_DEVICE_KEYBOARD);
@@ -1600,7 +1615,7 @@ void win32_set_style(MONITORINFOEX *current_mon, HMONITOR *hm_to_use,
    bool video_window_save_positions = settings->bools.video_window_save_positions;
    float video_refresh              = settings->floats.video_refresh_rate;
    unsigned swap_interval           = settings->uints.video_swap_interval;
-   bool bfi                         = settings->bools.video_black_frame_insertion;
+   unsigned bfi                     = settings->uints.video_black_frame_insertion;
    unsigned window_position_x       = settings->uints.window_position_x;
    unsigned window_position_y       = settings->uints.window_position_y;
    unsigned window_position_width   = settings->uints.window_position_width;
@@ -1610,9 +1625,9 @@ void win32_set_style(MONITORINFOEX *current_mon, HMONITOR *hm_to_use,
    {
       /* Windows only reports the refresh rates for modelines as
        * an integer, so video_refresh_rate needs to be rounded. Also, account
-       * for black frame insertion using video_refresh_rate set to half
+       * for black frame insertion using video_refresh_rate set to a portion
        * of the display refresh rate, as well as higher vsync swap intervals. */
-      float refresh_mod      = bfi ? 2.0f : 1.0f;
+      float refresh_mod      = bfi + 1.0f;
       unsigned refresh       = roundf(video_refresh * refresh_mod 
             * swap_interval);
 

@@ -31,6 +31,7 @@
 #include <3ds/services/mcuhwc.h>
 
 #include <file/file_path.h>
+#include <string/stdstring.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../../config.h"
@@ -80,7 +81,7 @@ static void get_first_valid_core(char* path_return, size_t len)
          if (strlen(ent->d_name) > strlen(extension) 
                && !strcmp(ent->d_name + strlen(ent->d_name) - strlen(extension), extension))
          {
-            strlcpy(path_return, "sdmc:/retroarch/cores/", len);
+            strcpy_literal(path_return, "sdmc:/retroarch/cores/");
             strlcat(path_return, ent->d_name, len);
             break;
          }
@@ -93,8 +94,6 @@ static void get_first_valid_core(char* path_return, size_t len)
 static void frontend_ctr_get_environment_settings(int* argc, char* argv[],
       void* args, void* params_data)
 {
-   (void)args;
-
    fill_pathname_basedir(g_defaults.dirs[DEFAULT_DIR_PORT], elf_path_cst, sizeof(g_defaults.dirs[DEFAULT_DIR_PORT]));
    RARCH_LOG("port dir: [%s]\n", g_defaults.dirs[DEFAULT_DIR_PORT]);
 
@@ -128,6 +127,10 @@ static void frontend_ctr_get_environment_settings(int* argc, char* argv[],
                       "logs", sizeof(g_defaults.dirs[DEFAULT_DIR_LOGS]));
    fill_pathname_join(g_defaults.path_config, g_defaults.dirs[DEFAULT_DIR_PORT],
                       FILE_PATH_MAIN_CONFIG, sizeof(g_defaults.path_config));
+
+#ifndef IS_SALAMANDER
+   dir_check_defaults("custom.ini");
+#endif
 }
 
 static void frontend_ctr_deinit(void* data)
@@ -484,7 +487,9 @@ static void frontend_ctr_init(void* data)
    ctr_check_dspfirm();
    if (ndspInit() != 0) {
       audio_ctr_dsp = audio_null;
+#ifdef HAVE_THREADS
       audio_ctr_dsp_thread = audio_null;
+#endif
    }
    cfguInit();
    ptmuInit();
@@ -589,7 +594,7 @@ static void frontend_ctr_get_os(char* s, size_t len, int* major, int* minor)
    OS_VersionBin cver;
    OS_VersionBin nver;
 
-   strlcpy(s, "3DS OS", len);
+   strcpy_literal(s, "3DS OS");
    Result data_invalid = osGetSystemVersionData(&nver, &cver);
    if (data_invalid == 0)
    {
@@ -614,26 +619,26 @@ static void frontend_ctr_get_name(char* s, size_t len)
    switch (device_model)
    {
       case 0:
-         strlcpy(s, "Old 3DS", len);
+         strcpy_literal(s, "Old 3DS");
          break;
       case 1:
-         strlcpy(s, "Old 3DS XL", len);
+         strcpy_literal(s, "Old 3DS XL");
          break;
       case 2:
-         strlcpy(s, "New 3DS", len);
+         strcpy_literal(s, "New 3DS");
          break;
       case 3:
-         strlcpy(s, "Old 2DS", len);
+         strcpy_literal(s, "Old 2DS");
          break;
       case 4:
-         strlcpy(s, "New 3DS XL", len);
+         strcpy_literal(s, "New 3DS XL");
          break;
       case 5:
-         strlcpy(s, "New 2DS XL", len);
+         strcpy_literal(s, "New 2DS XL");
          break;
 
       default:
-         strlcpy(s, "Unknown Device", len);
+         strcpy_literal(s, "Unknown Device");
          break;
    }
 }
@@ -667,6 +672,8 @@ frontend_ctx_driver_t frontend_ctx_ctr =
    NULL,                         /* destroy_signal_handler_state */
    NULL,                         /* attach_console */
    NULL,                         /* detach_console */
+   NULL,                         /* get_lakka_version */
+   NULL,                         /* set_screen_brightness */
    NULL,                         /* watch_path_for_changes */
    NULL,                         /* check_for_path_changes */
    NULL,                         /* set_sustained_performance_mode */

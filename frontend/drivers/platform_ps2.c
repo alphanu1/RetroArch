@@ -33,6 +33,7 @@
 #include "../../defaults.h"
 #include "../../file_path_special.h"
 #include "../../verbosity.h"
+#include "../../paths.h"
 #include <elf-loader.h>
 
 
@@ -110,6 +111,7 @@ static void reset_IOP()
 static void frontend_ps2_get_environment_settings(int *argc, char *argv[],
       void *args, void *params_data)
 {
+   int i;
    create_path_names();
 
 #ifndef IS_SALAMANDER
@@ -139,13 +141,10 @@ static void frontend_ps2_get_environment_settings(int *argc, char *argv[],
       }
    }
 #endif
-   int i;
-   for (i = 0; i < DEFAULT_DIR_LAST; i++)
-   {
-      const char *dir_path = g_defaults.dirs[i];
-      if (!string_is_empty(dir_path))
-         path_mkdir(dir_path);
-   }
+
+#ifndef IS_SALAMANDER
+   dir_check_defaults("custom.ini");
+#endif
 }
 
 static void frontend_ps2_init(void *data)
@@ -178,19 +177,23 @@ static void frontend_ps2_init(void *data)
    SifExecModuleBuffer(&audsrv_irx, size_audsrv_irx, 0, NULL, NULL);
 
    /* Initializes audsrv library */
-   if (audsrv_init()) {
+   if (audsrv_init())
+   {
       RARCH_ERR("audsrv library not initalizated\n");
    }
 
    /* Initializes pad libraries
       Must be init with 0 as parameter*/
-   if (mtapInit() != 1) {
+   if (mtapInit() != 1)
+   {
       RARCH_ERR("mtapInit library not initalizated\n");
    }
-   if (padInit(0) != 1) {
+   if (padInit(0) != 1)
+   {
       RARCH_ERR("padInit library not initalizated\n");
    }
-   if (mtapPortOpen(0) != 1) {
+   if (mtapPortOpen(0) != 1)
+   {
       RARCH_ERR("mtapPortOpen library not initalizated\n");
    }
 #endif
@@ -379,9 +382,8 @@ frontend_ctx_driver_t frontend_ctx_ps2 = {
    NULL,                         /* destroy_sighandler_state */
    NULL,                         /* attach_console */
    NULL,                         /* detach_console */
-#ifdef HAVE_LAKKA
    NULL,                         /* get_lakka_version */
-#endif
+   NULL,                         /* set_screen_brightness */
    NULL,                         /* watch_path_for_changes */
    NULL,                         /* check_for_path_changes */
    NULL,                         /* set_sustained_performance_mode */

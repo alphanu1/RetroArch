@@ -49,7 +49,7 @@
  * Code adapted from SDL 2.0's implementation.
  */
 
-#define UDEV_NUM_BUTTONS 32
+#define UDEV_NUM_BUTTONS 64
 #define NUM_AXES 32
 
 #ifndef NUM_HATS
@@ -538,7 +538,7 @@ static void udev_joypad_poll(void)
    }
 }
 
-static bool udev_joypad_init(void *data)
+static void *udev_joypad_init(void *data)
 {
    unsigned i;
    unsigned sorted_count = 0;
@@ -547,14 +547,12 @@ static bool udev_joypad_init(void *data)
    struct udev_enumerate *enumerate = NULL;
    struct joypad_udev_entry sorted[MAX_USERS];
 
-   (void)data;
-
    for (i = 0; i < MAX_USERS; i++)
       udev_pads[i].fd = -1;
 
    udev_joypad_fd = udev_new();
    if (!udev_joypad_fd)
-      return false;
+      return NULL;
 
    udev_joypad_mon = udev_monitor_new_from_netlink(udev_joypad_fd, "udev");
    if (udev_joypad_mon)
@@ -584,11 +582,12 @@ static bool udev_joypad_init(void *data)
    }
 
    udev_enumerate_unref(enumerate);
-   return true;
+
+   return (void*)-1;
 
 error:
    udev_joypad_destroy();
-   return false;
+   return NULL;
 }
 
 static int16_t udev_joypad_button_state(
@@ -639,7 +638,7 @@ static void udev_joypad_get_buttons(unsigned port, input_bits_t *state)
 
 	if (pad)
    {
-		BITS_COPY16_PTR( state, pad->buttons );
+		BITS_COPY64_PTR( state, pad->buttons );
 	}
    else
       BIT256_CLEAR_ALL_PTR(state);

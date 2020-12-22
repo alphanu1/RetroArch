@@ -3,10 +3,6 @@ MSG_HASH(
    MENU_ENUM_LABEL_SWITCH_GPU_PROFILE,
    "switch_gpu_profile"
    )
-MSG_HASH(
-   MENU_ENUM_LABEL_SWITCH_BACKLIGHT_CONTROL,
-   "switch_backlight_control"
-   )
 #endif
 #if defined(HAVE_LAKKA_SWITCH) || defined(HAVE_LIBNX)
 MSG_HASH(
@@ -85,6 +81,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_AUDIO_DSP_PLUGIN,
    "audio_dsp_plugin"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_AUDIO_DSP_PLUGIN_REMOVE,
+   "audio_dsp_plugin_remove"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_AUDIO_ENABLE,
@@ -411,6 +411,22 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_CONNECT_WIFI,
    "connect_wifi"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_WIFI_DISCONNECT,
+   "disconnect_wifi"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_WIFI_NETWORKS,
+   "wifi_list_networks"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_WIFI_ENABLED,
+   "wifi_enabled"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_WIFI_NETWORK_SCAN,
+   "wifi_network_scan"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_CONNECT_NETPLAY_ROOM,
@@ -1029,6 +1045,10 @@ MSG_HASH(
    "deferred_wifi_settings_list"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_DEFERRED_WIFI_NETWORKS_LIST,
+   "deferred_wifi_networks_list"
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_DEFERRED_INFORMATION,
    "deferred_information"
    )
@@ -1302,6 +1322,12 @@ MSG_HASH(
    MENU_ENUM_LABEL_INPUT_AUTODETECT_ENABLE,
    "input_autodetect_enable"
    )
+#if defined(HAVE_DINPUT) || defined(HAVE_WINRAWINPUT)
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_NOWINKEY_ENABLE,
+   "input_nowinkey_enable"
+   )
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_INPUT_SENSORS_ENABLE,
    "input_sensors_enable"
@@ -1419,6 +1445,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_INPUT_OVERLAY_AUTO_ROTATE,
    "input_overlay_auto_rotate"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_AUTO_SCALE,
+   "input_overlay_auto_scale"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_INPUT_PLAYER_ANALOG_DPAD_MODE,
@@ -2033,6 +2063,10 @@ MSG_HASH(
    "input_overlay_x_separation_portrait"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_OVERLAY_Y_SEPARATION_PORTRAIT,
+   "input_overlay_y_separation_portrait"
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_OVERLAY_X_OFFSET_PORTRAIT,
    "input_overlay_x_offset_portrait"
    )
@@ -2059,6 +2093,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_MENU_INSERT_DISK_RESUME,
    "menu_insert_disk_resume"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_QUIT_ON_CLOSE_CONTENT,
+   "quit_on_close_content"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_PAUSE_NONACTIVE,
@@ -2571,6 +2609,10 @@ MSG_HASH(
    "savestate_auto_save"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_SAVESTATE_MAX_KEEP,
+   "savestate_max_keep"
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_SAVESTATE_DIRECTORY,
    "savestate_directory"
    )
@@ -2957,6 +2999,10 @@ MSG_HASH(
    "use_this_directory"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_BRIGHTNESS_CONTROL,
+   "screen_brightness"
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_ALLOW_ROTATE,
    "video_allow_rotate"
    )
@@ -2988,6 +3034,16 @@ MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_ASPECT_RATIO_INDEX,
    "aspect_ratio_index"
    )
+#if defined(DINGUX)
+MSG_HASH(
+   MENU_ENUM_LABEL_VIDEO_DINGUX_IPU_KEEP_ASPECT,
+   "video_dingux_ipu_keep_aspect"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VIDEO_DINGUX_IPU_FILTER_TYPE,
+   "video_dingux_ipu_filter_type"
+   )
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_BLACK_FRAME_INSERTION,
    "video_black_frame_insertion"
@@ -3007,6 +3063,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_FILTER,
    "video_filter"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VIDEO_FILTER_REMOVE,
+   "video_filter_remove"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_FILTER_DIR,
@@ -3199,6 +3259,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_SHADER_PRESET_SAVE,
    "video_shader_preset_save"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VIDEO_SHADER_PRESET_SAVE_REFERENCE,
+   "video_shader_preset_save_reference"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_SHADER_PRESET_SAVE_AS,
@@ -4581,6 +4645,10 @@ MSG_HASH(
    "settings_show_logging"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_SETTINGS_SHOW_FILE_BROWSER,
+   "settings_show_file_browser"
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_SETTINGS_SHOW_FRAME_THROTTLE,
    "settings_show_frame_throttle"
    )
@@ -4599,6 +4667,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_SETTINGS_SHOW_AI_SERVICE,
    "settings_show_ai_service"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_SETTINGS_SHOW_ACCESSIBILITY,
+   "settings_show_accessibility"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_SETTINGS_SHOW_POWER_MANAGEMENT,
@@ -4738,6 +4810,12 @@ MSG_HASH(
    MENU_ENUM_LABEL_INPUT_HAPTIC_FEEDBACK_SETTINGS,
    "input_haptic_feedback_settings"
    )
+#if defined(DINGUX) && defined(HAVE_LIBSHAKE)
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_DINGUX_RUMBLE_GAIN,
+   "input_dingux_rumble_gain"
+   )
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_INPUT_TURBO_MODE,
    "input_turbo_mode"

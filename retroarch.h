@@ -605,7 +605,9 @@ extern audio_driver_t audio_psp;
 extern audio_driver_t audio_ps2;
 extern audio_driver_t audio_ctr_csnd;
 extern audio_driver_t audio_ctr_dsp;
+#ifdef HAVE_THREADS
 extern audio_driver_t audio_ctr_dsp_thread;
+#endif
 extern audio_driver_t audio_switch;
 extern audio_driver_t audio_switch_thread;
 extern audio_driver_t audio_switch_libnx_audren;
@@ -1137,6 +1139,7 @@ typedef struct video_frame_info
    unsigned custom_vp_height;
    unsigned custom_vp_full_width;
    unsigned custom_vp_full_height;
+   unsigned black_frame_insertion;
 
    float menu_wallpaper_opacity;
    float menu_framebuffer_opacity;
@@ -1178,7 +1181,6 @@ typedef struct video_frame_info
    bool widgets_is_rewinding;
    bool input_menu_swap_ok_cancel_buttons;
    bool input_driver_nonblock_state;
-   bool black_frame_insertion;
    bool hard_sync;
    bool fps_show;
    bool memory_show;
@@ -1590,9 +1592,6 @@ bool video_driver_set_video_mode(unsigned width,
 
 bool video_driver_get_video_output_size(
       unsigned *width, unsigned *height);
-
-void video_driver_set_osd_msg(const char *msg,
-      const void *params, void *font);
 
 void video_driver_set_texture_enable(bool enable, bool full_screen);
 

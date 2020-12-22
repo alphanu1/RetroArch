@@ -74,6 +74,10 @@ task_retriever_info_t *http_task_get_transfer_list(void);
 bool task_push_bluetooth_scan(retro_task_callback_t cb);
 
 bool task_push_wifi_scan(retro_task_callback_t cb);
+bool task_push_wifi_enable(retro_task_callback_t cb);
+bool task_push_wifi_disable(retro_task_callback_t cb);
+bool task_push_wifi_disconnect(retro_task_callback_t cb);
+bool task_push_wifi_connect(retro_task_callback_t cb, void*);
 
 bool task_push_netplay_lan_scan(retro_task_callback_t cb);
 
@@ -174,7 +178,7 @@ bool task_push_overlay_load_default(
       bool overlay_hide_when_gamepad_connected,
       bool input_overlay_enable,
       float input_overlay_opacity,
-      overlay_layout_t *layout,
+      overlay_layout_desc_t *layout_desc,
       void *user_data);
 #endif
 

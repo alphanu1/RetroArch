@@ -88,13 +88,6 @@ static void gfx_display_gl1_blend_end(void *data)
    glDisable(GL_BLEND);
 }
 
-static void gfx_display_gl1_viewport(gfx_display_ctx_draw_t *draw,
-      void *data)
-{
-   if (draw)
-      glViewport(draw->x, draw->y, draw->width, draw->height);
-}
-
 static void gfx_display_gl1_draw(gfx_display_ctx_draw_t *draw,
       void *data,
       unsigned video_width,
@@ -115,7 +108,7 @@ static void gfx_display_gl1_draw(gfx_display_ctx_draw_t *draw,
    if (!draw->texture)
       return;
 
-   gfx_display_gl1_viewport(draw, gl1);
+   glViewport(draw->x, draw->y, draw->width, draw->height);
 
    glEnable(GL_TEXTURE_2D);
 
@@ -174,23 +167,6 @@ static void gfx_display_gl1_draw(gfx_display_ctx_draw_t *draw,
    gl1->coords.color = gl1->white_color_ptr;
 }
 
-static void gfx_display_gl1_restore_clear_color(void)
-{
-   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-}
-
-static void gfx_display_gl1_clear_color(
-      gfx_display_ctx_clearcolor_t *clearcolor,
-      void *data)
-{
-   if (!clearcolor)
-      return;
-
-   glClearColor(clearcolor->r,
-         clearcolor->g, clearcolor->b, clearcolor->a);
-   glClear(GL_COLOR_BUFFER_BIT);
-}
-
 static bool gfx_display_gl1_font_init_first(
       void **font_handle, void *video_data,
       const char *font_path, float menu_font_size,
@@ -227,11 +203,8 @@ static void gfx_display_gl1_scissor_end(
 gfx_display_ctx_driver_t gfx_display_ctx_gl1 = {
    gfx_display_gl1_draw,
    NULL,
-   gfx_display_gl1_viewport,
    gfx_display_gl1_blend_begin,
    gfx_display_gl1_blend_end,
-   gfx_display_gl1_restore_clear_color,
-   gfx_display_gl1_clear_color,
    gfx_display_gl1_get_default_mvp,
    gfx_display_gl1_get_default_vertices,
    gfx_display_gl1_get_default_tex_coords,

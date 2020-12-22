@@ -166,7 +166,7 @@ static void get_first_valid_core(char *path_return, size_t len)
             break;
          if (strlen(ent->d_name) > strlen(extension) && !strcmp(ent->d_name + strlen(ent->d_name) - strlen(extension), extension))
          {
-            strlcpy(path_return, SD_PREFIX "/retroarch/cores", len);
+            strcpy_literal(path_return, SD_PREFIX "/retroarch/cores");
             strlcat(path_return, "/", len);
             strlcat(path_return, ent->d_name, len);
             break;
@@ -276,6 +276,10 @@ static void frontend_switch_get_environment_settings(
          g_defaults.dirs[DEFAULT_DIR_PORT],
          FILE_PATH_MAIN_CONFIG,
          sizeof(g_defaults.path_config));
+
+#ifndef IS_SALAMANDER
+   dir_check_defaults("custom.ini");
+#endif
 }
 
 static void frontend_switch_deinit(void *data)
@@ -834,7 +838,7 @@ static void frontend_switch_get_os(
    ipc_request_t rq;
 #endif
 
-   strlcpy(s, "Horizon OS", len);
+   strcpy_literal(s, "Horizon OS");
 
 #ifdef HAVE_LIBNX
    *major = 0;
@@ -873,7 +877,7 @@ fail:
 static void frontend_switch_get_name(char *s, size_t len)
 {
    /* TODO: Add Mariko at some point */
-   strlcpy(s, "Nintendo Switch", len);
+   strcpy_literal(s, "Nintendo Switch");
 }
 
 void frontend_switch_process_args(int *argc, char *argv[])
@@ -923,6 +927,8 @@ frontend_ctx_driver_t frontend_ctx_switch =
         NULL, /* destroy_signal_handler_state */
         NULL, /* attach_console */
         NULL, /* detach_console */
+        NULL, /* get_lakka_version */
+        NULL, /* set_screen_brightness */
         NULL, /* watch_path_for_changes */
         NULL, /* check_for_path_changes */
         NULL, /* set_sustained_performance_mode */

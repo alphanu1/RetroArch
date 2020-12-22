@@ -120,12 +120,18 @@ struct overlay
    float mod_x, mod_y, mod_w, mod_h;
    float x, y, w, h;
    float center_x, center_y;
+   float aspect_ratio;
 
    struct
    {
       float alpha_mod;
       float range_mod;
-      bool normalized;
+
+      struct
+      {
+         unsigned size;
+         char key[64];
+      } descs;
 
       struct
       {
@@ -144,22 +150,21 @@ struct overlay
          char key[64];
       } rect;
 
-      struct
-      {
-         unsigned size;
-         char key[64];
-      } descs;
-
+      bool normalized;
    } config;
 
    bool full_screen;
    bool block_scale;
+   bool block_x_separation;
+   bool block_y_separation;
 
    char name[64];
 };
 
 struct overlay_desc
 {
+   struct texture_image image;
+
    enum overlay_hitbox hitbox;
    enum overlay_type type;
 
@@ -193,8 +198,6 @@ struct overlay_desc
    input_bits_t button_mask;
 
    char next_index_name[64];
-
-   struct texture_image image;
 };
 
 /* Holds general layout information for an
@@ -211,8 +214,22 @@ typedef struct
    float scale_portrait;
    float aspect_adjust_portrait;
    float x_separation_portrait;
+   float y_separation_portrait;
    float x_offset_portrait;
    float y_offset_portrait;
+   bool auto_scale;
+} overlay_layout_desc_t;
+
+/* Holds derived overlay layout information
+ * for a specific display orientation */
+typedef struct
+{
+   float x_scale;
+   float y_scale;
+   float x_separation;
+   float y_separation;
+   float x_offset;
+   float y_offset;
 } overlay_layout_t;
 
 typedef struct overlay_desc overlay_desc_t;
@@ -225,7 +242,7 @@ typedef struct
    struct overlay *active;
    size_t size;
    float overlay_opacity;
-   overlay_layout_t layout;
+   overlay_layout_desc_t layout_desc;
    bool overlay_enable;
    bool hide_in_menu;
    bool hide_when_gamepad_connected;

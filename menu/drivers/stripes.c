@@ -620,8 +620,9 @@ static void stripes_draw_icon(
          draw.y         = draw.y + (icon_size-draw.width)/2;
       }
 #endif
-      gfx_display_draw(&draw, userdata,
-            video_width, video_height);
+      if (draw.height > 0 && draw.width > 0)
+         if (dispctx && dispctx->draw)
+            dispctx->draw(&draw, userdata, video_width, video_height);
    }
 
    coords.color         = (const float*)color;
@@ -635,8 +636,9 @@ static void stripes_draw_icon(
       draw.y            = draw.y + (icon_size-draw.width)/2;
    }
 #endif
-   gfx_display_draw(&draw, userdata,
-         video_width, video_height);
+   if (draw.height > 0 && draw.width > 0)
+      if (dispctx && dispctx->draw)
+         dispctx->draw(&draw, userdata, video_width, video_height);
 }
 
 static void stripes_draw_text(
@@ -680,84 +682,6 @@ static void stripes_messagebox(void *data, const char *message)
       return;
 
    stripes->box_message = strdup(message);
-}
-
-static void stripes_render_keyboard(
-      stripes_handle_t *stripes,
-      void *userdata,
-      unsigned video_width,
-      unsigned video_height,
-      char **grid, unsigned id)
-{
-   unsigned i;
-   int ptr_width, ptr_height;
-   float dark[16]    =  {
-      0.00, 0.00, 0.00, 0.85,
-      0.00, 0.00, 0.00, 0.85,
-      0.00, 0.00, 0.00, 0.85,
-      0.00, 0.00, 0.00, 0.85,
-   };
-
-   float white[16]=  {
-      1.00, 1.00, 1.00, 1.00,
-      1.00, 1.00, 1.00, 1.00,
-      1.00, 1.00, 1.00, 1.00,
-      1.00, 1.00, 1.00, 1.00,
-   };
-
-   gfx_display_draw_quad(
-         userdata,
-         video_width,
-         video_height,
-         0,
-         video_height / 2.0,
-         video_width,
-         video_height/2.0,
-         video_width,
-         video_height,
-         &dark[0]);
-
-   ptr_width  = video_width / 11;
-   ptr_height = video_height / 10;
-
-   if (ptr_width >= ptr_height)
-      ptr_width = ptr_height;
-
-   for (i = 0; i < 44; i++)
-   {
-      int line_y = (i / 11) * video_height / 10.0;
-
-      if (i == id)
-      {
-         uintptr_t texture = stripes->textures.list[STRIPES_TEXTURE_KEY_HOVER];
-
-         gfx_display_blend_begin(userdata);
-
-         gfx_display_draw_texture(
-               userdata,
-               video_width,
-               video_height,
-               video_width  / 2.0f - (11 * ptr_width) / 2.0f + (i % 11) * ptr_width,
-               video_height / 2.0f + ptr_height * 1.5f + line_y,
-               ptr_width, ptr_height,
-               video_width,
-               video_height,
-               &white[0],
-               texture);
-
-         gfx_display_blend_end(userdata);
-      }
-
-      gfx_display_draw_text(stripes->font, grid[i],
-            video_width / 2.0f - (11 * ptr_width) / 2.0f + (i % 11) * ptr_width + ptr_width / 2.0f,
-            video_height / 2.0f + ptr_height + line_y + stripes->font->size / 3,
-            video_width,
-            video_height,
-            0xffffffff,
-            TEXT_ALIGN_CENTER,
-            1.0f,
-            false, 0.0f, false);
-   }
 }
 
 /* Returns the OSK key at a given position */
@@ -807,6 +731,8 @@ static void stripes_render_messagebox_internal(
    float line_height        = 0;
    struct string_list *list = !string_is_empty(message)
       ? string_split(message, "\n") : NULL;
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    if (!list || !stripes || !stripes->font)
    {
@@ -841,7 +767,8 @@ static void stripes_render_messagebox_internal(
       }
    }
 
-   gfx_display_blend_begin(userdata);
+   if (dispctx && dispctx->blend_begin)
+      dispctx->blend_begin(userdata);
 
    gfx_display_draw_texture_slice(
          userdata,
@@ -874,12 +801,15 @@ static void stripes_render_messagebox_internal(
    }
 
    if (menu_input_dialog_get_display_kb())
-      stripes_render_keyboard(stripes,
+      gfx_display_draw_keyboard(
             userdata,
             video_width,
             video_height,
+            stripes->textures.list[STRIPES_TEXTURE_KEY_HOVER],
+            stripes->font,
             input_event_get_osk_grid(),
-            input_event_get_osk_ptr());
+            input_event_get_osk_ptr(),
+            0xffffffff);
 
 end:
    string_list_free(list);
@@ -2351,6 +2281,7 @@ static int stripes_draw_item(
    stripes_node_t *   node               = (stripes_node_t*)
       file_list_get_userdata_at_offset(list, i);
    settings_t *settings              = config_get_ptr();
+   gfx_animation_t *p_anim           = anim_get_ptr();
 
    /* Initial ticker configuration */
    ticker.type_enum = settings->uints.menu_ticker_type;
@@ -2470,7 +2401,7 @@ static int stripes_draw_item(
 
    ticker.s        = tmp;
    ticker.len      = ticker_limit;
-   ticker.idx      = gfx_animation_get_ticker_idx();
+   ticker.idx      = p_anim->ticker_idx;
    ticker.str      = ticker_str;
    ticker.selected = (i == current);
 
@@ -2506,7 +2437,7 @@ static int stripes_draw_item(
 
    ticker.s        = tmp;
    ticker.len      = 35 * stripes_scale_mod[7];
-   ticker.idx      = gfx_animation_get_ticker_idx();
+   ticker.idx      = p_anim->ticker_idx;
    ticker.selected = (i == current);
 
    if (!string_is_empty(entry->value))
@@ -2616,6 +2547,8 @@ static void stripes_draw_items(
    size_t end                   = 0;
    const char *thumb_ident      = stripes_thumbnails_ident('R');
    const char *left_thumb_ident = stripes_thumbnails_ident('L');
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    if (!list || !list->size || !stripes)
       return;
@@ -2653,7 +2586,8 @@ static void stripes_draw_items(
 
    stripes_calculate_visible_range(stripes, height, end, current, &first, &last);
 
-   gfx_display_blend_begin(userdata);
+   if (dispctx && dispctx->blend_begin)
+      dispctx->blend_begin(userdata);
 
    for (i = first; i <= last; i++)
    {
@@ -2676,7 +2610,8 @@ static void stripes_draw_items(
          break;
    }
 
-   gfx_display_blend_end(userdata);
+   if (dispctx && dispctx->blend_end)
+      dispctx->blend_end(userdata);
 }
 
 static void stripes_render(void *data,
@@ -2685,9 +2620,10 @@ static void stripes_render(void *data,
 {
    size_t i;
    menu_input_pointer_t pointer;
-   settings_t   *settings   = config_get_ptr();
-   stripes_handle_t *stripes        = (stripes_handle_t*)data;
-   unsigned      end        = (unsigned)menu_entries_get_size();
+   settings_t   *settings    = config_get_ptr();
+   stripes_handle_t *stripes = (stripes_handle_t*)data;
+   unsigned      end         = (unsigned)menu_entries_get_size();
+   gfx_animation_t *p_anim   = anim_get_ptr();
 
    if (!stripes)
       return;
@@ -2726,7 +2662,7 @@ static void stripes_render(void *data,
       menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &i);
    }
 
-   gfx_animation_ctl(MENU_ANIMATION_CTL_CLEAR_ACTIVE, NULL);
+   GFX_ANIMATION_CLEAR_ACTIVE(p_anim);
 }
 
 static bool stripes_shader_pipeline_active(unsigned menu_shader_pipeline)
@@ -2756,6 +2692,8 @@ static void stripes_draw_bg(
       rgb[0], rgb[1], rgb[2], 1,
       rgb[0], rgb[1], rgb[2], 1,
    };
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    coords.vertices      = 4;
    coords.vertex        = NULL;
@@ -2773,10 +2711,16 @@ static void stripes_draw_bg(
    draw.prim_type   = GFX_DISPLAY_PRIM_TRIANGLESTRIP;
    draw.pipeline_id = 0;
 
-   gfx_display_blend_begin(userdata);
-   gfx_display_draw(&draw, userdata,
-         video_width, video_height);
-   gfx_display_blend_end(userdata);
+   if (dispctx)
+   {
+      if (dispctx->blend_begin)
+         dispctx->blend_begin(userdata);
+      if (dispctx->draw)
+         if (draw.height > 0 && draw.width > 0)
+            dispctx->draw(&draw, userdata, video_width, video_height);
+      if (dispctx->blend_end)
+         dispctx->blend_end(userdata);
+   }
 }
 
 static void stripes_draw_dark_layer(
@@ -2795,6 +2739,8 @@ static void stripes_draw_dark_layer(
       0, 0, 0, 1,
       0, 0, 0, 1,
    };
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    gfx_display_set_alpha(black, MIN(stripes->alpha, 0.75));
 
@@ -2814,10 +2760,16 @@ static void stripes_draw_dark_layer(
    draw.prim_type   = GFX_DISPLAY_PRIM_TRIANGLESTRIP;
    draw.pipeline_id = 0;
 
-   gfx_display_blend_begin(userdata);
-   gfx_display_draw(&draw, userdata,
-         video_width, video_height);
-   gfx_display_blend_end(userdata);
+   if (dispctx)
+   {
+      if (dispctx->blend_begin)
+         dispctx->blend_begin(userdata);
+      if (dispctx->draw)
+         if (draw.height > 0 && draw.width > 0)
+            dispctx->draw(&draw, userdata, video_width, video_height);
+      if (dispctx->blend_end)
+         dispctx->blend_end(userdata);
+   }
 }
 
 static void stripes_frame(void *data, video_frame_info_t *video_info)
@@ -2846,6 +2798,8 @@ static void stripes_frame(void *data, video_frame_info_t *video_info)
    float stack_width                       = 285;
    stripes_handle_t *stripes               = (stripes_handle_t*)data;
    settings_t *settings                    = config_get_ptr();
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    if (!stripes)
       return;
@@ -2885,25 +2839,37 @@ static void stripes_frame(void *data, video_frame_info_t *video_info)
    rotate_draw.scale_enable = true;
 
    gfx_display_rotate_z(&rotate_draw, userdata);
-   gfx_display_blend_begin(userdata);
+   if (dispctx && dispctx->blend_begin)
+      dispctx->blend_begin(userdata);
 
    /* Horizontal stripes */
    for (i = 0; i <= stripes_list_get_size(stripes, MENU_LIST_HORIZONTAL)
       + stripes->system_tab_end; i++)
    {
+      float color[16];
+      float rgb[3];
       stripes_node_t *node = stripes_get_node(stripes, i);
 
       if (!node)
          continue;
 
-      float rgb[3];
       HSLToRGB(0.07*(float)i,0.5,0.5, &rgb[0]) ;
-      float color[16] = {
-         rgb[0], rgb[1], rgb[2], 0.55,
-         rgb[0], rgb[1], rgb[2], 0.55,
-         rgb[0], rgb[1], rgb[2], 0.55,
-         rgb[0], rgb[1], rgb[2], 0.55,
-      };
+      color[0]        = rgb[0];
+      color[1]        = rgb[1];
+      color[2]        = rgb[2];
+      color[3]        = 0.55;
+      color[4]        = rgb[0];
+      color[5]        = rgb[1];
+      color[6]        = rgb[2];
+      color[7]        = 0.55;
+      color[8]        = rgb[0];
+      color[9]        = rgb[1];
+      color[10]       = rgb[2];
+      color[11]       = 0.55;
+      color[12]       = rgb[0];
+      color[13]       = rgb[1];
+      color[14]       = rgb[2];
+      color[15]       = 0.55;
 
       gfx_display_draw_polygon(
             userdata,
@@ -2920,7 +2886,8 @@ static void stripes_frame(void *data, video_frame_info_t *video_info)
             video_width, video_height,
             &color[0]);
 
-      gfx_display_blend_begin(userdata);
+      if (dispctx && dispctx->blend_begin)
+         dispctx->blend_begin(userdata);
 
       stack_width += node->width;
    }
@@ -2980,7 +2947,8 @@ static void stripes_frame(void *data, video_frame_info_t *video_info)
       stack_width += node->width;
    }
 
-   gfx_display_blend_end(userdata);
+   if (dispctx && dispctx->blend_end)
+      dispctx->blend_end(userdata);
 
    /* Vertical icons */
 #if 0
@@ -3038,7 +3006,7 @@ static void stripes_frame(void *data, video_frame_info_t *video_info)
             sizeof(msg));
       free(stripes->box_message);
       stripes->box_message  = NULL;
-      render_background = true;
+      render_background     = true;
    }
 
    if (render_background)
@@ -3068,18 +3036,19 @@ static void stripes_frame(void *data, video_frame_info_t *video_info)
 
       gfx_display_set_alpha(stripes_coord_white, MIN(stripes->alpha, 1.00f));
 
-      gfx_display_draw_cursor(
-            userdata,
-            video_width,
-            video_height,
-            cursor_visible,
-            &stripes_coord_white[0],
-            stripes->cursor_size,
-            stripes->textures.list[STRIPES_TEXTURE_POINTER],
-            pointer.x,
-            pointer.y,
-            video_width,
-            video_height);
+      if (cursor_visible)
+         gfx_display_draw_cursor(
+               userdata,
+               video_width,
+               video_height,
+               cursor_visible,
+               &stripes_coord_white[0],
+               stripes->cursor_size,
+               stripes->textures.list[STRIPES_TEXTURE_POINTER],
+               pointer.x,
+               pointer.y,
+               video_width,
+               video_height);
    }
 
    video_driver_set_viewport(video_width, video_height, false, true);
@@ -3088,6 +3057,7 @@ static void stripes_frame(void *data, video_frame_info_t *video_info)
 static void stripes_layout_ps3(stripes_handle_t *stripes, int width, int height)
 {
    unsigned new_font_size, new_header_height;
+   gfx_display_t *p_disp         = disp_get_ptr();
    settings_t *settings          = config_get_ptr();
 
    float scale_factor            =
@@ -3168,12 +3138,13 @@ static void stripes_layout_ps3(stripes_handle_t *stripes, int width, int height)
    RARCH_LOG("[XMB] icon size:          %.2f\n",  stripes->icon_size);
 #endif
 
-   gfx_display_set_header_height(new_header_height);
+   p_disp->header_height = new_header_height;
 }
 
 static void stripes_layout_psp(stripes_handle_t *stripes, int width)
 {
    unsigned new_font_size, new_header_height;
+   gfx_display_t *p_disp         = disp_get_ptr();
    settings_t *settings          = config_get_ptr();
    float scale_factor            =
       ((settings->floats.menu_scale_factor * width) / 1920.0) * 1.5;
@@ -3238,7 +3209,7 @@ static void stripes_layout_psp(stripes_handle_t *stripes, int width)
    RARCH_LOG("[XMB] icon size:          %.2f\n",  stripes->icon_size);
 #endif
 
-   gfx_display_set_header_height(new_header_height);
+   p_disp->header_height = new_header_height;
 }
 
 static void stripes_layout(stripes_handle_t *stripes)
@@ -3314,7 +3285,7 @@ static void *stripes_init(void **userdata, bool video_is_threaded)
 {
    unsigned width, height;
    int i;
-   stripes_handle_t *stripes          = NULL;
+   stripes_handle_t *stripes  = NULL;
    settings_t *settings       = config_get_ptr();
    menu_handle_t *menu        = (menu_handle_t*)calloc(1, sizeof(*menu));
    float scale_value          = settings->floats.menu_scale_factor * 100.0f;
@@ -3408,7 +3379,7 @@ static void *stripes_init(void **userdata, bool video_is_threaded)
    gfx_display_set_width(width);
    gfx_display_set_height(height);
 
-   gfx_display_allocate_white_texture();
+   gfx_display_init_white_texture(gfx_display_white_texture);
 
    file_list_initialize(&stripes->horizontal_list);
    stripes_init_horizontal_list(stripes);
@@ -3459,6 +3430,9 @@ static void stripes_free(void *data)
          free(stripes->bg_file_path);
    }
 
+   if (gfx_display_white_texture)
+      video_driver_texture_unload(&gfx_display_white_texture);
+
    font_driver_bind_block(NULL, NULL);
 }
 
@@ -3487,7 +3461,9 @@ static bool stripes_load_image(void *userdata, void *data, enum menu_image_type 
          video_driver_texture_load(data,
                TEXTURE_FILTER_MIPMAP_LINEAR,
                &stripes->textures.bg);
-         gfx_display_allocate_white_texture();
+         if (gfx_display_white_texture)
+            video_driver_texture_unload(&gfx_display_white_texture);
+         gfx_display_init_white_texture(gfx_display_white_texture);
          break;
       case MENU_IMAGE_THUMBNAIL:
          {
@@ -3660,7 +3636,9 @@ static void stripes_context_reset_textures(
    for (i = 0; i < STRIPES_TEXTURE_LAST; i++)
       gfx_display_reset_textures_list(stripes_texture_path(i), iconpath, &stripes->textures.list[i], TEXTURE_FILTER_MIPMAP_LINEAR, NULL, NULL);
 
-   gfx_display_allocate_white_texture();
+   if (gfx_display_white_texture)
+      video_driver_texture_unload(&gfx_display_white_texture);
+   gfx_display_init_white_texture(gfx_display_white_texture);
 
    stripes->main_menu_node.icon     = stripes->textures.list[STRIPES_TEXTURE_MAIN_MENU];
    stripes->main_menu_node.alpha    = stripes->categories_active_alpha;
@@ -4391,7 +4369,8 @@ static int stripes_pointer_up(void *userdata,
       case MENU_INPUT_GESTURE_SHORT_PRESS:
          {
             /* Normal pointer input */
-            unsigned header_height = gfx_display_get_header_height();
+            gfx_display_t *p_disp  = disp_get_ptr();
+            unsigned header_height = p_disp->header_height;
 
             if (y < header_height)
                return (unsigned)generic_menu_entry_action(stripes,

@@ -49,6 +49,7 @@
 #include "../../defines/ps3_defines.h"
 #include "../../defaults.h"
 #include "../../verbosity.h"
+#include "../../paths.h"
 
 #ifdef __PSL1GHT__
 #define EMULATOR_CONTENT_DIR "SSNE10001"
@@ -77,7 +78,7 @@ static enum frontend_fork ps3_fork_mode = FRONTEND_FORK_NONE;
 
 static void frontend_ps3_shutdown(bool unused)
 {
-   sys_process_exit(0);
+   sysProcessExit(0);
 }
 #endif
 
@@ -206,6 +207,8 @@ static void frontend_ps3_get_environment_settings(int *argc, char *argv[],
       verbosity_enable();
    else
       verbosity_disable();
+
+   dir_check_defaults("custom.ini");
 #endif
 }
 
@@ -329,6 +332,7 @@ static void frontend_ps3_get_environment_settings(int *argc, char *argv[],
       verbosity_enable();
    else
       verbosity_disable();
+   dir_check_defaults("custom.ini");
 #endif
 }
 #endif
@@ -463,7 +467,7 @@ static int frontend_ps3_exec_exitspawn(const char *path,
 #ifndef __PSL1GHT__
    ret = sceNpDrmProcessExitSpawn(license_data, path,
          (const char** const)argv, envp, (sys_addr_t)spawn_data,
-         256, 1000, SYS_PROCESS_PRIMARY_STACK_SIZE_1M);
+         256, 1000, SYS_PROCESS_SPAWN_STACK_SIZE_1M);
 #else
    ret = -1;
 #endif
@@ -471,8 +475,8 @@ static int frontend_ps3_exec_exitspawn(const char *path,
    if (ret <  0)
    {
       RARCH_WARN("SELF file is not of NPDRM type, trying another approach to boot it...\n");
-      sys_game_process_exitspawn(path, (const char** const)argv,
-            envp, NULL, 0, 1000, SYS_PROCESS_PRIMARY_STACK_SIZE_1M);
+      sysProcessExitSpawn2(path, (const char** const)argv,
+            envp, NULL, 0, 1000, SYS_PROCESS_SPAWN_STACK_SIZE_1M);
    }
 
    return ret;
@@ -702,6 +706,8 @@ frontend_ctx_driver_t frontend_ctx_ps3 = {
    NULL,                         /* destroy_sighandler_state */
    NULL,                         /* attach_console */
    NULL,                         /* detach_console */
+   NULL,                         /* get_lakka_version */
+   NULL,                         /* set_screen_brightness */
    NULL,                         /* watch_path_for_changes */
    NULL,                         /* check_for_path_changes */
    NULL,                         /* set_sustained_performance_mode */

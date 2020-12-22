@@ -42,6 +42,7 @@
 #include "../../retroarch.h"
 #include "../../verbosity.h"
 #include "../../ui/drivers/ui_win32.h"
+#include "../../paths.h"
 
 #include "../../uwp/uwp_func.h"
 
@@ -104,36 +105,36 @@ static void frontend_uwp_get_os(char *s, size_t len, int *major, int *minor)
    {
       case 10:
          if (server)
-            strlcpy(s, "Windows Server 2016", len);
+            strcpy_literal(s, "Windows Server 2016");
          else
-            strlcpy(s, "Windows 10", len);
+            strcpy_literal(s, "Windows 10");
          break;
       case 6:
          switch (vi.dwMinorVersion)
          {
             case 3:
                if (server)
-                  strlcpy(s, "Windows Server 2012 R2", len);
+                  strcpy_literal(s, "Windows Server 2012 R2");
                else
-                  strlcpy(s, "Windows 8.1", len);
+                  strcpy_literal(s, "Windows 8.1");
                break;
             case 2:
                if (server)
-                  strlcpy(s, "Windows Server 2012", len);
+                  strcpy_literal(s, "Windows Server 2012");
                else
-                  strlcpy(s, "Windows 8", len);
+                  strcpy_literal(s, "Windows 8");
                break;
             case 1:
                if (server)
-                  strlcpy(s, "Windows Server 2008 R2", len);
+                  strcpy_literal(s, "Windows Server 2008 R2");
                else
-                  strlcpy(s, "Windows 7", len);
+                  strcpy_literal(s, "Windows 7");
                break;
             case 0:
                if (server)
-                  strlcpy(s, "Windows Server 2008", len);
+                  strcpy_literal(s, "Windows Server 2008");
                else
-                  strlcpy(s, "Windows Vista", len);
+                  strcpy_literal(s, "Windows Vista");
                break;
             default:
                break;
@@ -144,19 +145,19 @@ static void frontend_uwp_get_os(char *s, size_t len, int *major, int *minor)
          {
             case 2:
                if (server)
-                  strlcpy(s, "Windows Server 2003", len);
+                  strcpy_literal(s, "Windows Server 2003");
                else
                {
                   /* Yes, XP Pro x64 is a higher version number than XP x86 */
                   if (string_is_equal(arch, "x64"))
-                     strlcpy(s, "Windows XP", len);
+                     strcpy_literal(s, "Windows XP");
                }
                break;
             case 1:
-               strlcpy(s, "Windows XP", len);
+               strcpy_literal(s, "Windows XP");
                break;
             case 0:
-               strlcpy(s, "Windows 2000", len);
+               strcpy_literal(s, "Windows 2000");
                break;
          }
          break;
@@ -165,17 +166,17 @@ static void frontend_uwp_get_os(char *s, size_t len, int *major, int *minor)
          {
             case 0:
                if (vi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-                  strlcpy(s, "Windows 95", len);
+                  strcpy_literal(s, "Windows 95");
                else if (vi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-                  strlcpy(s, "Windows NT 4.0", len);
+                  strcpy_literal(s, "Windows NT 4.0");
                else
-                  strlcpy(s, "Unknown", len);
+                  strcpy_literal(s, "Unknown");
                break;
             case 90:
-               strlcpy(s, "Windows ME", len);
+               strcpy_literal(s, "Windows ME");
                break;
             case 10:
-               strlcpy(s, "Windows 98", len);
+               strcpy_literal(s, "Windows 98");
                break;
          }
          break;
@@ -253,16 +254,12 @@ enum frontend_architecture frontend_uwp_get_architecture(void)
    {
       case PROCESSOR_ARCHITECTURE_AMD64:
          return FRONTEND_ARCH_X86_64;
-         break;
       case PROCESSOR_ARCHITECTURE_INTEL:
          return FRONTEND_ARCH_X86;
-         break;
       case PROCESSOR_ARCHITECTURE_ARM:
          return FRONTEND_ARCH_ARM;
-         break;
       case PROCESSOR_ARCHITECTURE_ARM64:
          return FRONTEND_ARCH_ARMV8;
-         break;
       default:
          break;
    }
@@ -391,12 +388,17 @@ static void frontend_uwp_environment_get(int *argc, char *argv[],
 #ifdef HAVE_MENU
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES) || defined(HAVE_OPENGL_CORE)
    if (string_is_equal(uwp_device_family, "Windows.Mobile"))
-      snprintf(g_defaults.settings_menu,
-            sizeof(g_defaults.settings_menu), "glui");
-   else
-      snprintf(g_defaults.settings_menu,
-            sizeof(g_defaults.settings_menu), "xmb");
+      strcpy_literal(g_defaults.settings_menu, "glui");
 #endif
+#endif
+
+#ifndef IS_SALAMANDER
+   {
+      char custom_ini_path[PATH_MAX_LENGTH];
+      fill_pathname_expand_special(custom_ini_path,
+            "~\\custom.ini", sizeof(custom_ini_path));
+      dir_check_defaults(custom_ini_path);
+   }
 #endif
 }
 
@@ -468,6 +470,8 @@ frontend_ctx_driver_t frontend_ctx_uwp = {
    NULL,                            /* destroy_sighandler_state */
    NULL,                            /* attach_console */
    NULL,                            /* detach_console */
+   NULL,                            /* get_lakka_version */
+   NULL,                            /* set_screen_brightness */
    NULL,                            /* watch_path_for_changes */
    NULL,                            /* check_for_path_changes */
    NULL,                            /* set_sustained_performance_mode */

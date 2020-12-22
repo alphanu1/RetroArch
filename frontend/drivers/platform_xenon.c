@@ -33,6 +33,7 @@
 #include <boolean.h>
 
 #include "../../dynamic.h"
+#include "../../paths.h"
 
 static void frontend_xenon_init(void *data)
 {
@@ -91,6 +92,8 @@ frontend_ctx_driver_t frontend_ctx_qnx = {
    NULL,                         /* destroy_sighandler_state */
    NULL,                         /* attach_console */
    NULL,                         /* detach_console */
+   NULL,                         /* get_lakka_version */
+   NULL,                         /* set_screen_brightness */
    NULL,                         /* watch_path_for_changes */
    NULL,                         /* check_for_path_changes */
    NULL,                         /* set_sustained_performance_mode */

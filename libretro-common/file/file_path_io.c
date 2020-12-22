@@ -82,15 +82,11 @@
 #include <pspkernel.h>
 #endif
 
-#if defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)
-#include <cell/cell_fs.h>
-#endif
-
 #if defined(VITA)
 #define FIO_S_ISDIR SCE_S_ISDIR
 #endif
 
-#if (defined(__CELLOS_LV2__) && !defined(__PSL1GHT__)) || defined(__QNX__) || defined(PSP) || defined(PS2)
+#if defined(__QNX__) || defined(PSP) || defined(PS2)
 #include <unistd.h> /* stat() is defined here */
 #endif
 
@@ -196,20 +192,6 @@ bool path_mkdir(const char *dir)
       free(basedir);
       return false;
    }
-
-#if defined(GEKKO)
-   {
-      size_t len = strlen(basedir);
-
-      /* path_parent_dir() keeps the trailing slash.
-       * On Wii, mkdir() fails if the path has a
-       * trailing slash...
-       * We must therefore remove it. */
-      if (len > 0)
-         if (basedir[len - 1] == '/')
-            basedir[len - 1] = '\0';
-   }
-#endif
 
    if (path_is_directory(basedir))
       norecurse = true;

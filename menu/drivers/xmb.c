@@ -809,6 +809,8 @@ static void *xmb_list_get_entry(void *data,
 
 static void xmb_draw_icon(
       void *userdata,
+      gfx_display_t *p_disp,
+      gfx_display_ctx_driver_t *dispctx,
       unsigned video_width,
       unsigned video_height,
       bool xmb_shadows_enable,
@@ -870,8 +872,9 @@ static void xmb_draw_icon(
          draw.y         = draw.y + (icon_size-draw.width)/2;
       }
 #endif
-      gfx_display_draw(&draw, userdata,
-            video_width, video_height);
+      if (draw.height > 0 && draw.width > 0)
+         if (dispctx && dispctx->draw)
+            dispctx->draw(&draw, userdata, video_width, video_height);
    }
 
    coords.color         = (const float*)color;
@@ -885,8 +888,9 @@ static void xmb_draw_icon(
       draw.y            = draw.y + (icon_size-draw.width)/2;
    }
 #endif
-   gfx_display_draw(&draw, userdata,
-         video_width, video_height);
+   if (draw.height > 0 && draw.width > 0)
+      if (dispctx && dispctx->draw)
+         dispctx->draw(&draw, userdata, video_width, video_height);
 }
 
 static void xmb_draw_text(
@@ -944,6 +948,8 @@ static void xmb_render_messagebox_internal(
    float line_height        = 0;
    int usable_width         = 0;
    struct string_list list  = {0};
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    wrapped_message[0]       = '\0';
 
@@ -999,7 +1005,8 @@ static void xmb_render_messagebox_internal(
       }
    }
 
-   gfx_display_blend_begin(userdata);
+   if (dispctx && dispctx->blend_begin)
+      dispctx->blend_begin(userdata);
 
    gfx_display_draw_texture_slice(
          userdata,
@@ -2287,22 +2294,18 @@ static int xmb_environ(enum menu_environ_cb type, void *data, void *userdata)
 {
    xmb_handle_t *xmb        = (xmb_handle_t*)userdata;
 
+   if (!xmb)
+      return -1;
+
    switch (type)
    {
       case MENU_ENVIRON_ENABLE_MOUSE_CURSOR:
-         if (!xmb)
-            return -1;
          xmb->mouse_show = true;
          break;
       case MENU_ENVIRON_DISABLE_MOUSE_CURSOR:
-         if (!xmb)
-            return -1;
          xmb->mouse_show = false;
          break;
       case MENU_ENVIRON_RESET_HORIZONTAL_LIST:
-         if (!xmb)
-            return -1;
-
          xmb_refresh_horizontal_list(xmb);
          break;
       default:
@@ -2692,6 +2695,8 @@ static uintptr_t xmb_icon_get_id(xmb_handle_t *xmb,
       case MENU_ENUM_LABEL_CORE_DELETE:
       case MENU_ENUM_LABEL_DELETE_PLAYLIST:
       case MENU_ENUM_LABEL_CORE_DELETE_BACKUP_LIST:
+      case MENU_ENUM_LABEL_VIDEO_FILTER_REMOVE:
+      case MENU_ENUM_LABEL_AUDIO_DSP_PLUGIN_REMOVE:
          return xmb->textures.list[XMB_TEXTURE_CLOSE];
       case MENU_ENUM_LABEL_CORE_LOCK:
          return xmb->textures.list[XMB_TEXTURE_CORE];
@@ -2764,7 +2769,8 @@ static uintptr_t xmb_icon_get_id(xmb_handle_t *xmb,
       case MENU_ENUM_LABEL_EXPLORE_ITEM:
       {
          uintptr_t icon = menu_explore_get_entry_icon(type);
-         if (icon) return icon;
+         if (icon)
+            return icon;
          break;
       }
 #endif
@@ -2856,10 +2862,8 @@ static uintptr_t xmb_icon_get_id(xmb_handle_t *xmb,
          return xmb->textures.list[XMB_TEXTURE_RELOAD];
       case MENU_SETTING_ACTION_PAUSE_ACHIEVEMENTS:
          return xmb->textures.list[XMB_TEXTURE_PAUSE];
-#ifdef HAVE_LAKKA_SWITCH
-      case MENU_SET_SWITCH_BRIGHTNESS:
+      case MENU_SET_SCREEN_BRIGHTNESS:
          return xmb->textures.list[XMB_TEXTURE_BRIGHTNESS];
-#endif
       case MENU_SETTING_GROUP:
          return xmb->textures.list[XMB_TEXTURE_SETTING];
       case MENU_INFO_MESSAGE:
@@ -3007,6 +3011,8 @@ static uintptr_t xmb_icon_get_id(xmb_handle_t *xmb,
 
 static int xmb_draw_item(
       void *userdata,
+      gfx_display_t            *p_disp,
+      gfx_display_ctx_driver_t *dispctx,
       unsigned video_width,
       unsigned video_height,
       bool xmb_shadows_enable,
@@ -3044,11 +3050,12 @@ static int xmb_draw_item(
       settings->uints.menu_xmb_thumbnail_scale_factor;
    bool menu_xmb_vertical_thumbnails   = settings->bools.menu_xmb_vertical_thumbnails;
    bool menu_show_sublabels            = settings->bools.menu_show_sublabels;
+   gfx_animation_t *p_anim             = anim_get_ptr();
 
    /* Initial ticker configuration */
    if (use_smooth_ticker)
    {
-      ticker_smooth.idx           = gfx_animation_get_ticker_pixel_idx();
+      ticker_smooth.idx           = p_anim->ticker_pixel_idx;
       ticker_smooth.font          = xmb->font;
       ticker_smooth.font_scale    = 1.0f;
       ticker_smooth.type_enum     = menu_ticker_type;
@@ -3058,7 +3065,7 @@ static int xmb_draw_item(
    }
    else
    {
-      ticker.idx       = gfx_animation_get_ticker_idx();
+      ticker.idx       = p_anim->ticker_idx;
       ticker.type_enum = menu_ticker_type;
       ticker.spacer    = NULL;
    }
@@ -3251,7 +3258,7 @@ static int xmb_draw_item(
          {
             line_ticker_smooth.fade_enabled         = true;
             line_ticker_smooth.type_enum            = menu_ticker_type;
-            line_ticker_smooth.idx                  = gfx_animation_get_ticker_pixel_line_idx();
+            line_ticker_smooth.idx                  = p_anim->ticker_pixel_line_idx;
 
             line_ticker_smooth.font                 = xmb->font2;
             line_ticker_smooth.font_scale           = 1.0f;
@@ -3284,7 +3291,7 @@ static int xmb_draw_item(
          else
          {
             line_ticker.type_enum = menu_ticker_type;
-            line_ticker.idx       = gfx_animation_get_ticker_idx();
+            line_ticker.idx       = p_anim->ticker_idx;
 
             line_ticker.line_len  = (size_t)(line_ticker_width);
             /* Note: max_lines should be calculated at runtime,
@@ -3403,6 +3410,8 @@ static int xmb_draw_item(
 
       xmb_draw_icon(
             userdata,
+            p_disp,
+            dispctx,
             video_width,
             video_height,
             xmb_shadows_enable,
@@ -3425,6 +3434,8 @@ static int xmb_draw_item(
    if (texture_switch != 0 && color[3] != 0 && !xmb->assets_missing)
       xmb_draw_icon(
             userdata,
+            p_disp,
+            dispctx,
             video_width,
             video_height,
             xmb_shadows_enable,
@@ -3461,6 +3472,8 @@ static void xmb_draw_items(
    gfx_display_ctx_rotate_draw_t rotate_draw;
    xmb_node_t *core_node       = NULL;
    size_t end                  = 0;
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    if (!list || !list->size || !xmb)
       return;
@@ -3499,12 +3512,15 @@ static void xmb_draw_items(
    xmb_calculate_visible_range(xmb, height,
          end, (unsigned)current, &first, &last);
 
-   gfx_display_blend_begin(userdata);
+   if (dispctx && dispctx->blend_begin)
+      dispctx->blend_begin(userdata);
 
    for (i = first; i <= last; i++)
    {
       if (xmb_draw_item(
             userdata,
+            p_disp,
+            dispctx,
             video_width,
             video_height,
             xmb_shadows_enable,
@@ -3516,7 +3532,8 @@ static void xmb_draw_items(
          break;
    }
 
-   gfx_display_blend_end(userdata);
+   if (dispctx && dispctx->blend_end)
+      dispctx->blend_end(userdata);
 }
 
 static INLINE bool xmb_use_ps3_layout(
@@ -3543,22 +3560,26 @@ static INLINE bool xmb_use_ps3_layout(
 static INLINE float xmb_get_scale_factor(
       settings_t *settings, bool use_ps3_layout, unsigned width)
 {
-   float menu_scale_factor = settings->floats.menu_scale_factor;
    float scale_factor;
+   float menu_scale_factor = settings->floats.menu_scale_factor;
 
    /* PS3 Layout */
    if (use_ps3_layout)
-      scale_factor = (menu_scale_factor * (float)width) / 1920.0f;
+      scale_factor = ((menu_scale_factor * (float)width) / 1920.0f);
    /* PSP Layout */
    else
+   {
 #ifdef _3DS
       scale_factor = menu_scale_factor / 4.0f;
 #else
       scale_factor = ((menu_scale_factor * (float)width) / 1920.0f) * 1.5f;
 #endif
+   }
 
    /* Apply safety limit */
-   return (scale_factor >= 0.1f) ? scale_factor : 0.1f;
+   if (scale_factor < 0.1f)
+      return 0.1f;
+   return scale_factor;
 }
 
 static void xmb_context_reset_internal(xmb_handle_t *xmb,
@@ -3570,6 +3591,7 @@ static void xmb_hide_fullscreen_thumbnails(
       xmb_handle_t *xmb, bool animate)
 {
    uintptr_t alpha_tag = (uintptr_t)&xmb->fullscreen_thumbnail_alpha;
+   gfx_thumbnail_state_t *p_gfx_thumb = gfx_thumb_get_ptr();
 
    /* Kill any existing fade in/out animations */
    gfx_animation_kill_by_tag(&alpha_tag);
@@ -3582,7 +3604,7 @@ static void xmb_hide_fullscreen_thumbnails(
       /* Configure fade out animation */
       animation_entry.easing_enum  = EASING_OUT_QUAD;
       animation_entry.tag          = alpha_tag;
-      animation_entry.duration     = gfx_thumbnail_get_fade_duration();
+      animation_entry.duration     = p_gfx_thumb->fade_duration;
       animation_entry.target_value = 0.0f;
       animation_entry.subject      = &xmb->fullscreen_thumbnail_alpha;
       animation_entry.cb           = NULL;
@@ -3606,10 +3628,11 @@ static void xmb_show_fullscreen_thumbnails(
 {
    menu_entry_t selected_entry;
    gfx_animation_ctx_entry_t animation_entry;
-   const char *core_name            = NULL;
-   const char *thumbnail_label      = NULL;
-   uintptr_t              alpha_tag = (uintptr_t)
+   const char *core_name              = NULL;
+   const char *thumbnail_label        = NULL;
+   uintptr_t              alpha_tag   = (uintptr_t)
       &xmb->fullscreen_thumbnail_alpha;
+   gfx_thumbnail_state_t *p_gfx_thumb = gfx_thumb_get_ptr();
 
    /* Before showing fullscreen thumbnails, must
     * ensure that any existing fullscreen thumbnail
@@ -3689,7 +3712,7 @@ static void xmb_show_fullscreen_thumbnails(
    /* Configure fade in animation */
    animation_entry.easing_enum  = EASING_OUT_QUAD;
    animation_entry.tag          = alpha_tag;
-   animation_entry.duration     = gfx_thumbnail_get_fade_duration();
+   animation_entry.duration     = p_gfx_thumb->fade_duration;
    animation_entry.target_value = 1.0f;
    animation_entry.subject      = &xmb->fullscreen_thumbnail_alpha;
    animation_entry.cb           = NULL;
@@ -3814,6 +3837,8 @@ static void xmb_render(void *data,
    xmb_handle_t *xmb        = (xmb_handle_t*)data;
    settings_t *settings     = config_get_ptr();
    unsigned      end        = (unsigned)menu_entries_get_size();
+   gfx_display_t *p_disp    = disp_get_ptr();
+   gfx_animation_t *p_anim  = anim_get_ptr();
 
    if (!xmb)
       return;
@@ -3834,8 +3859,8 @@ static void xmb_render(void *data,
    /* This must be set every frame when using a pointer,
     * otherwise touchscreen input breaks when changing
     * orientation */
-   gfx_display_set_width(width);
-   gfx_display_set_height(height);
+   p_disp->framebuf_width  = width;
+   p_disp->framebuf_height = height;
 
    /* Read pointer state */
    menu_input_get_pointer_state(&xmb->pointer);
@@ -3984,7 +4009,7 @@ static void xmb_render(void *data,
       menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &i);
    }
 
-   gfx_animation_ctl(MENU_ANIMATION_CTL_CLEAR_ACTIVE, NULL);
+   GFX_ANIMATION_CLEAR_ACTIVE(p_anim);
 }
 
 static bool xmb_shader_pipeline_active(unsigned menu_shader_pipeline)
@@ -4010,6 +4035,8 @@ static void xmb_draw_bg(
       float *coord_white)
 {
    gfx_display_ctx_draw_t draw;
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    draw.x                    = 0;
    draw.y                    = 0;
@@ -4024,7 +4051,8 @@ static void xmb_draw_bg(
    draw.pipeline_id          = 0;
    draw.pipeline_active      = xmb_shader_pipeline_active(menu_shader_pipeline);
 
-   gfx_display_blend_begin(userdata);
+   if (dispctx && dispctx->blend_begin)
+      dispctx->blend_begin(userdata);
    video_driver_set_viewport(video_width, video_height, true, false);
 
 #ifdef HAVE_SHADERPIPELINE
@@ -4039,12 +4067,16 @@ static void xmb_draw_bg(
       else
          gfx_display_set_alpha(draw.color, coord_white[3]);
 
-      gfx_display_draw_gradient(&draw,
-            userdata,
-            video_width,
-            video_height,
-            menu_wallpaper_opacity
-            );
+      /* Draw gradient */
+      draw.texture       = 0;
+      draw.x             = 0;
+      draw.y             = 0;
+
+      gfx_display_draw_bg(&draw, userdata, false,
+            menu_wallpaper_opacity);
+      if (draw.height > 0 && draw.width > 0)
+         if (dispctx && dispctx->draw)
+            dispctx->draw(&draw, userdata, video_width, video_height);
 
       draw.pipeline_id = VIDEO_SHADER_MENU_2;
 
@@ -4069,10 +4101,8 @@ static void xmb_draw_bg(
             break;
       }
 
-      gfx_display_draw_pipeline(&draw,
-            userdata,
-            video_width,
-            video_height);
+      if (dispctx && dispctx->draw_pipeline)
+         dispctx->draw_pipeline(&draw, userdata, video_width, video_height);
    }
    else
 #endif
@@ -4088,11 +4118,18 @@ static void xmb_draw_bg(
          gfx_display_set_alpha(draw.color, coord_white[3]);
 
       if (xmb_color_theme != XMB_THEME_WALLPAPER)
-         gfx_display_draw_gradient(&draw,
-            userdata,
-            video_width,
-            video_height,
-            menu_wallpaper_opacity);
+      {
+         /* Draw gradient */
+         draw.texture       = 0;
+         draw.x             = 0;
+         draw.y             = 0;
+
+         gfx_display_draw_bg(&draw, userdata, false,
+               menu_wallpaper_opacity);
+         if (draw.height > 0 && draw.width > 0)
+            if (dispctx && dispctx->draw)
+               dispctx->draw(&draw, userdata, video_width, video_height);
+      }
 
       {
          bool add_opacity       = false;
@@ -4111,9 +4148,14 @@ static void xmb_draw_bg(
       }
    }
 
-   gfx_display_draw(&draw, userdata,
-         video_width, video_height);
-   gfx_display_blend_end(userdata);
+   if (dispctx)
+   {
+      if (dispctx->draw)
+         if (draw.height > 0 && draw.width > 0)
+            dispctx->draw(&draw, userdata, video_width, video_height);
+      if (dispctx->blend_end)
+         dispctx->blend_end(userdata);
+   }
 }
 
 static void xmb_draw_dark_layer(
@@ -4130,6 +4172,8 @@ static void xmb_draw_dark_layer(
       0, 0, 0, 1,
       0, 0, 0, 1,
    };
+   gfx_display_t            *p_disp  = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx = p_disp->dispctx;
 
    gfx_display_set_alpha(black, MIN(xmb->alpha, 0.75));
 
@@ -4149,10 +4193,16 @@ static void xmb_draw_dark_layer(
    draw.prim_type   = GFX_DISPLAY_PRIM_TRIANGLESTRIP;
    draw.pipeline_id = 0;
 
-   gfx_display_blend_begin(userdata);
-   gfx_display_draw(&draw, userdata,
-         width, height);
-   gfx_display_blend_end(userdata);
+   if (dispctx)
+   {
+      if (dispctx->blend_begin)
+         dispctx->blend_begin(userdata);
+      if (draw.height > 0 && draw.width > 0)
+         if (dispctx && dispctx->draw)
+            dispctx->draw(&draw, userdata, width, height);
+      if (dispctx->blend_end)
+         dispctx->blend_end(userdata);
+   }
 }
 
 static void xmb_draw_fullscreen_thumbnails(
@@ -4217,6 +4267,7 @@ static void xmb_draw_fullscreen_thumbnails(
       bool menu_ticker_smooth           = settings->bools.menu_ticker_smooth;
       enum gfx_animation_ticker_type 
          menu_ticker_type               = (enum gfx_animation_ticker_type)settings->uints.menu_ticker_type;
+      gfx_animation_t *p_anim           = anim_get_ptr();
 
       /* Sanity check: Return immediately if this is
        * a menu without thumbnails and we are not currently
@@ -4418,7 +4469,7 @@ static void xmb_draw_fullscreen_thumbnails(
 
             title_buf[0] = '\0';
 
-            ticker_smooth.idx           = gfx_animation_get_ticker_pixel_idx();
+            ticker_smooth.idx           = p_anim->ticker_pixel_idx;
             ticker_smooth.font          = xmb->font;
             ticker_smooth.font_scale    = 1.0f;
             ticker_smooth.type_enum     = menu_ticker_type;
@@ -4603,6 +4654,8 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
    bool libretro_running                   = video_info->libretro_running;
    unsigned menu_shader_pipeline           = video_info->menu_shader_pipeline;
    float menu_wallpaper_opacity            = video_info->menu_wallpaper_opacity;
+   gfx_display_t            *p_disp        = disp_get_ptr();
+   gfx_display_ctx_driver_t *dispctx       = p_disp->dispctx;
 
    if (!xmb)
       return;
@@ -4935,9 +4988,12 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
 
          if (coord_white[3] != 0 &&  !xmb->assets_missing)
          {
-            gfx_display_blend_begin(userdata);
+            if (dispctx && dispctx->blend_begin)
+               dispctx->blend_begin(userdata);
             xmb_draw_icon(
                   userdata,
+                  p_disp,
+                  dispctx,
                   video_width,
                   video_height,
                   xmb_shadows_enable,
@@ -4960,7 +5016,8 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
                   1,
                   &item_color[0],
                   xmb->shadow_offset);
-            gfx_display_blend_end(userdata);
+                  if (dispctx && dispctx->blend_end)
+                     dispctx->blend_end(userdata);
          }
 
          percent_width = (unsigned)
@@ -4987,9 +5044,12 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
          if (percent_width)
             x_pos = percent_width + (xmb->icon_size / 2.5);
 
-         gfx_display_blend_begin(userdata);
+         if (dispctx && dispctx->blend_begin)
+            dispctx->blend_begin(userdata);
          xmb_draw_icon(
                userdata,
+               p_disp,
+               dispctx,
                video_width,
                video_height,
                xmb_shadows_enable,
@@ -5005,7 +5065,8 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
                1,
                &item_color[0],
                xmb->shadow_offset);
-         gfx_display_blend_end(userdata);
+         if (dispctx && dispctx->blend_end)
+            dispctx->blend_end(userdata);
       }
 
       timedate[0]             = '\0';
@@ -5032,9 +5093,12 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
 
    if (coord_white[3] != 0 && !xmb->assets_missing)
    {
-      gfx_display_blend_begin(userdata);
+      if (dispctx && dispctx->blend_begin)
+         dispctx->blend_begin(userdata);
       xmb_draw_icon(
             userdata,
+            p_disp,
+            dispctx,
             video_width,
             video_height,
             xmb_shadows_enable,
@@ -5054,13 +5118,15 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
             1,
             &item_color[0],
             xmb->shadow_offset);
-      gfx_display_blend_end(userdata);
+      if (dispctx && dispctx->blend_end)
+         dispctx->blend_end(userdata);
    }
 
    /* Horizontal tab icons */
    if (!xmb->assets_missing)
    {
-      gfx_display_blend_begin(userdata);
+      if (dispctx && dispctx->blend_begin)
+         dispctx->blend_begin(userdata);
 
       for (i = 0; i <= xmb_list_get_size(xmb, MENU_LIST_HORIZONTAL)
             + xmb->system_tab_end; i++)
@@ -5118,6 +5184,8 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
 
             xmb_draw_icon(
                   userdata,
+                  p_disp,
+                  dispctx,
                   video_width,
                   video_height,
                   xmb_shadows_enable,
@@ -5136,7 +5204,8 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
          }
       }
 
-      gfx_display_blend_end(userdata);
+      if (dispctx && dispctx->blend_end)
+         dispctx->blend_end(userdata);
    }
 
    /* Vertical icons */
@@ -5217,18 +5286,19 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
          && menu_mouse_enable;
 
       gfx_display_set_alpha(coord_white, MIN(xmb->alpha, 1.00f));
-      gfx_display_draw_cursor(
-            userdata,
-            video_width,
-            video_height,
-            cursor_visible,
-            &coord_white[0],
-            xmb->cursor_size,
-            xmb->textures.list[XMB_TEXTURE_POINTER],
-            xmb->pointer.x,
-            xmb->pointer.y,
-            video_width,
-            video_height);
+      if (cursor_visible)
+         gfx_display_draw_cursor(
+               userdata,
+               video_width,
+               video_height,
+               cursor_visible,
+               &coord_white[0],
+               xmb->cursor_size,
+               xmb->textures.list[XMB_TEXTURE_POINTER],
+               xmb->pointer.x,
+               xmb->pointer.y,
+               video_width,
+               video_height);
    }
 
    video_driver_set_viewport(video_width, video_height, false, true);
@@ -5236,7 +5306,7 @@ static void xmb_frame(void *data, video_frame_info_t *video_info)
 
 static void xmb_layout_ps3(xmb_handle_t *xmb, int width)
 {
-   unsigned new_font_size, new_header_height;
+   unsigned new_font_size;
    float scale_factor            = xmb->last_scale_factor;
 
    xmb->above_subitem_offset     =   1.5;
@@ -5258,7 +5328,6 @@ static void xmb_layout_ps3(xmb_handle_t *xmb, int width)
 
    new_font_size                 = 32.0  * scale_factor;
    xmb->font2_size               = 24.0  * scale_factor;
-   new_header_height             = 128.0 * scale_factor;
 
    xmb->cursor_size              = 64.0 * scale_factor;
 
@@ -5282,13 +5351,11 @@ static void xmb_layout_ps3(xmb_handle_t *xmb, int width)
 
    xmb->icon_size                = 128.0 * scale_factor;
    xmb->font_size                = new_font_size;
-
-   gfx_display_set_header_height(new_header_height);
 }
 
 static void xmb_layout_psp(xmb_handle_t *xmb, int width)
 {
-   unsigned new_font_size, new_header_height;
+   unsigned new_font_size;
    float scale_factor            = xmb->last_scale_factor;
 
    xmb->above_subitem_offset     =  1.5;
@@ -5310,7 +5377,6 @@ static void xmb_layout_psp(xmb_handle_t *xmb, int width)
 
    new_font_size                 = 32.0  * scale_factor;
    xmb->font2_size               = 24.0  * scale_factor;
-   new_header_height             = 128.0 * scale_factor;
    xmb->margins_screen_top       = (256+32) * scale_factor;
 
    xmb->cursor_size              = 64.0;
@@ -5329,8 +5395,6 @@ static void xmb_layout_psp(xmb_handle_t *xmb, int width)
    xmb->margins_slice            = 16 * scale_factor;
    xmb->icon_size                = 128.0 * scale_factor;
    xmb->font_size                = new_font_size;
-
-   gfx_display_set_header_height(new_header_height);
 }
 
 static void xmb_layout(xmb_handle_t *xmb)
@@ -5427,7 +5491,8 @@ static void xmb_init_ribbon(xmb_handle_t * xmb)
    video_coords_t coords;
    unsigned r, c, col;
    unsigned i                = 0;
-   video_coord_array_t *ca   = gfx_display_get_coords_array();
+   gfx_display_t *p_disp     = disp_get_ptr();
+   video_coord_array_t *ca   = &p_disp->dispca;
    unsigned   vertices_total = XMB_RIBBON_VERTICES;
    float *dummy              = (float*)calloc(4 * vertices_total, sizeof(float));
    float *ribbon_verts       = (float*)calloc(2 * vertices_total, sizeof(float));
@@ -5480,6 +5545,7 @@ static void *xmb_init(void **userdata, bool video_is_threaded)
    int i;
    xmb_handle_t *xmb          = NULL;
    settings_t *settings       = config_get_ptr();
+   gfx_animation_t *p_anim    = anim_get_ptr();
    menu_handle_t *menu        = (menu_handle_t*)calloc(1, sizeof(*menu));
    float scale_value          = settings->floats.menu_scale_factor * 100.0f;
 
@@ -5585,7 +5651,7 @@ static void *xmb_init(void **userdata, bool video_is_threaded)
    gfx_display_set_width(width);
    gfx_display_set_height(height);
 
-   gfx_display_allocate_white_texture();
+   gfx_display_init_white_texture(gfx_display_white_texture);
 
    file_list_initialize(&xmb->horizontal_list);
 
@@ -5615,7 +5681,7 @@ static void *xmb_init(void **userdata, bool video_is_threaded)
    xmb->last_use_ps3_layout = xmb->use_ps3_layout;
    xmb->last_scale_factor   = xmb_get_scale_factor(settings, xmb->use_ps3_layout, width);
 
-   gfx_animation_set_update_time_cb(xmb_menu_animation_update_time);
+   p_anim->updatetime_cb    = xmb_menu_animation_update_time;
 
    return menu;
 
@@ -5625,13 +5691,14 @@ error:
    xmb_free_list_nodes(&xmb->horizontal_list, false);
    file_list_deinitialize(&xmb->selection_buf_old);
    file_list_deinitialize(&xmb->horizontal_list);
-   gfx_animation_unset_update_time_cb();
+   p_anim->updatetime_cb    = NULL;
    return NULL;
 }
 
 static void xmb_free(void *data)
 {
-   xmb_handle_t *xmb = (xmb_handle_t*)data;
+   xmb_handle_t       *xmb = (xmb_handle_t*)data;
+   gfx_animation_t *p_anim = anim_get_ptr();
 
    if (xmb)
    {
@@ -5652,9 +5719,12 @@ static void xmb_free(void *data)
          free(xmb->thumbnail_path_data);
    }
 
+   if (gfx_display_white_texture)
+      video_driver_texture_unload(&gfx_display_white_texture);
+
    font_driver_bind_block(NULL, NULL);
 
-   gfx_animation_unset_update_time_cb();
+   p_anim->updatetime_cb    = NULL;
 }
 
 static void xmb_context_bg_destroy(xmb_handle_t *xmb)
@@ -5678,10 +5748,12 @@ static bool xmb_load_image(void *userdata, void *data,
       case MENU_IMAGE_WALLPAPER:
          xmb_context_bg_destroy(xmb);
          video_driver_texture_unload(&xmb->textures.bg);
+         if (gfx_display_white_texture)
+            video_driver_texture_unload(&gfx_display_white_texture);
          video_driver_texture_load(data,
                TEXTURE_FILTER_MIPMAP_LINEAR,
                &xmb->textures.bg);
-         gfx_display_allocate_white_texture();
+         gfx_display_init_white_texture(gfx_display_white_texture);
          break;
       case MENU_IMAGE_NONE:
       default:
@@ -5955,7 +6027,9 @@ static void xmb_context_reset_textures(
 
    xmb->assets_missing = false;
 
-   gfx_display_allocate_white_texture();
+   if (gfx_display_white_texture)
+      video_driver_texture_unload(&gfx_display_white_texture);
+   gfx_display_init_white_texture(gfx_display_white_texture);
 
    for (i = 0; i < XMB_TEXTURE_LAST; i++)
    {
@@ -6063,25 +6137,24 @@ static void xmb_context_reset_textures(
          )
       {
          for (i=0;i<16;i++)
+         {
+            if ((i==3) || (i==7) || (i==11) || (i==15))
             {
-               if ((i==3) || (i==7) || (i==11) || (i==15))
-                  {
-                     item_color[i] = 1;
-                     continue;
-                  }
-               item_color[i] = 0.95;
+               item_color[i] = 1;
+               continue;
             }
+            item_color[i] = 0.95;
+         }
       }
       else
          memcpy(item_color, coord_white, sizeof(item_color));
    }
 
-return;
+   return;
 
 error:
    xmb->assets_missing = true;
    RARCH_WARN("[XMB] Critical asset missing, no icons will be drawn\n");
-   return;
 }
 
 static void xmb_context_reset_background(const char *iconpath)
@@ -6769,9 +6842,6 @@ static int xmb_list_push(void *data, void *userdata,
 
 #ifdef HAVE_LAKKA_SWITCH
             entry.enum_idx      = MENU_ENUM_LABEL_SWITCH_GPU_PROFILE;
-            menu_displaylist_setting(&entry);
-
-            entry.enum_idx      = MENU_ENUM_LABEL_SWITCH_BACKLIGHT_CONTROL;
             menu_displaylist_setting(&entry);
 #endif
 

@@ -83,34 +83,18 @@ static unsigned to_menu_pipeline(
       case VIDEO_SHADER_MENU_5:
          return 12 + (type == GFX_DISPLAY_PRIM_TRIANGLESTRIP);
       default:
-         return 0;
+         break;
    }
-}
-#endif
-
-static void gfx_display_vk_viewport(gfx_display_ctx_draw_t *draw,
-      void *data)
-{
-   vk_t *vk                      = (vk_t*)data;
-
-   if (!vk || !draw)
-      return;
-
-   vk->vk_vp.x        = draw->x;
-   vk->vk_vp.y        = vk->context->swapchain_height - draw->y - draw->height;
-   vk->vk_vp.width    = draw->width;
-   vk->vk_vp.height   = draw->height;
-   vk->vk_vp.minDepth = 0.0f;
-   vk->vk_vp.maxDepth = 1.0f;
+   return 0;
 }
 
 static void gfx_display_vk_draw_pipeline(gfx_display_ctx_draw_t *draw,
       void *data, unsigned video_width, unsigned video_height)
 {
-#ifdef HAVE_SHADERPIPELINE
    static uint8_t ubo_scratch_data[768];
    static float t                   = 0.0f;
-   float yflip                      = 0.0f;
+   gfx_display_t *p_disp            = disp_get_ptr();
+   float yflip                      = 1.0f;
    static struct video_coords blank_coords;
    float output_size[2];
    video_coord_array_t *ca          = NULL;
@@ -132,13 +116,12 @@ static void gfx_display_vk_draw_pipeline(gfx_display_ctx_draw_t *draw,
       default:
       case VIDEO_SHADER_MENU:
       case VIDEO_SHADER_MENU_2:
-         ca = gfx_display_get_coords_array();
+         ca                               = &p_disp->dispca;
          draw->coords                     = (struct video_coords*)&ca->coords;
          draw->backend_data               = ubo_scratch_data;
          draw->backend_data_size          = 2 * sizeof(float);
 
          /* Match UBO layout in shader. */
-         yflip = 1.0f;
          memcpy(ubo_scratch_data, &t, sizeof(t));
          memcpy(ubo_scratch_data + sizeof(float), &yflip, sizeof(yflip));
          break;
@@ -162,8 +145,6 @@ static void gfx_display_vk_draw_pipeline(gfx_display_ctx_draw_t *draw,
          /* Shader uses FragCoord, need to fix up. */
          if (draw->pipeline_id == VIDEO_SHADER_MENU_5)
             yflip = -1.0f;
-         else
-            yflip = 1.0f;
 
          memcpy(ubo_scratch_data + sizeof(math_matrix_4x4) 
                + 2 * sizeof(float), &t, sizeof(t));
@@ -176,8 +157,8 @@ static void gfx_display_vk_draw_pipeline(gfx_display_ctx_draw_t *draw,
    }
 
    t += 0.01;
-#endif
 }
+#endif
 
 static void gfx_display_vk_draw(gfx_display_ctx_draw_t *draw,
       void *data, unsigned video_width, unsigned video_height)
@@ -210,14 +191,19 @@ static void gfx_display_vk_draw(gfx_display_ctx_draw_t *draw,
    if (!color)
       color                       = &vk_colors[0];
 
-   gfx_display_vk_viewport(draw, vk);
+   vk->vk_vp.x                    = draw->x;
+   vk->vk_vp.y                    = vk->context->swapchain_height - draw->y - draw->height;
+   vk->vk_vp.width                = draw->width;
+   vk->vk_vp.height               = draw->height;
+   vk->vk_vp.minDepth             = 0.0f;
+   vk->vk_vp.maxDepth             = 1.0f;
 
-   vk->tracker.dirty |= VULKAN_DIRTY_DYNAMIC_BIT;
+   vk->tracker.dirty             |= VULKAN_DIRTY_DYNAMIC_BIT;
 
    /* Bake interleaved VBO. Kinda ugly, we should probably try to move to
     * an interleaved model to begin with ... */
    if (!vulkan_buffer_chain_alloc(vk->context, &vk->chain->vbo,
-         draw->coords->vertices * sizeof(struct vk_vertex), &range))
+            draw->coords->vertices * sizeof(struct vk_vertex), &range))
       return;
 
    pv = (struct vk_vertex*)range.data;
@@ -242,79 +228,46 @@ static void gfx_display_vk_draw(gfx_display_ctx_draw_t *draw,
       case VIDEO_SHADER_MENU_3:
       case VIDEO_SHADER_MENU_4:
       case VIDEO_SHADER_MENU_5:
-      {
-         struct vk_draw_triangles call;
+         {
+            struct vk_draw_triangles call;
 
-         call.pipeline     = vk->display.pipelines[
+            call.pipeline     = vk->display.pipelines[
                to_menu_pipeline(draw->prim_type, draw->pipeline_id)];
-         call.texture      = NULL;
-         call.sampler      = VK_NULL_HANDLE;
-         call.uniform      = draw->backend_data;
-         call.uniform_size = draw->backend_data_size;
-         call.vbo          = &range;
-         call.vertices     = draw->coords->vertices;
+            call.texture      = NULL;
+            call.sampler      = VK_NULL_HANDLE;
+            call.uniform      = draw->backend_data;
+            call.uniform_size = draw->backend_data_size;
+            call.vbo          = &range;
+            call.vertices     = draw->coords->vertices;
 
-         vulkan_draw_triangles(vk, &call);
-         break;
-      }
-
+            vulkan_draw_triangles(vk, &call);
+         }
          break;
 #endif
 
       default:
-      {
-         struct vk_draw_triangles call;
-         unsigned 
-            disp_pipeline  = ((draw->prim_type == 
-                  GFX_DISPLAY_PRIM_TRIANGLESTRIP) << 1) | 
-            (vk->display.blend << 0);
-         call.pipeline     = vk->display.pipelines[disp_pipeline];
-         call.texture      = texture;
-         call.sampler      = texture->mipmap ?
-            vk->samplers.mipmap_linear :
-            (texture->default_smooth ? vk->samplers.linear
-             : vk->samplers.nearest);
-         call.uniform      = draw->matrix_data
-            ? draw->matrix_data : &vk->mvp_no_rot;
-         call.uniform_size = sizeof(math_matrix_4x4);
-         call.vbo          = &range;
-         call.vertices     = draw->coords->vertices;
+         {
+            struct vk_draw_triangles call;
+            unsigned 
+               disp_pipeline  = ((draw->prim_type == 
+                        GFX_DISPLAY_PRIM_TRIANGLESTRIP) << 1) | 
+               (vk->display.blend << 0);
+            call.pipeline     = vk->display.pipelines[disp_pipeline];
+            call.texture      = texture;
+            call.sampler      = texture->mipmap ?
+               vk->samplers.mipmap_linear :
+               (texture->default_smooth ? vk->samplers.linear
+                : vk->samplers.nearest);
+            call.uniform      = draw->matrix_data
+               ? draw->matrix_data : &vk->mvp_no_rot;
+            call.uniform_size = sizeof(math_matrix_4x4);
+            call.vbo          = &range;
+            call.vertices     = draw->coords->vertices;
 
-         vulkan_draw_triangles(vk, &call);
+            vulkan_draw_triangles(vk, &call);
+         }
          break;
-      }
    }
-}
-
-static void gfx_display_vk_restore_clear_color(void)
-{
-}
-
-static void gfx_display_vk_clear_color(
-      gfx_display_ctx_clearcolor_t *clearcolor,
-      void *data)
-{
-   VkClearRect rect;
-   VkClearAttachment attachment;
-   vk_t *vk                               = (vk_t*)data;
-   if (!vk || !clearcolor)
-      return;
-
-   attachment.aspectMask                  = VK_IMAGE_ASPECT_COLOR_BIT;
-   attachment.colorAttachment             = 0;
-   attachment.clearValue.color.float32[0] = clearcolor->r;
-   attachment.clearValue.color.float32[1] = clearcolor->g;
-   attachment.clearValue.color.float32[2] = clearcolor->b;
-   attachment.clearValue.color.float32[3] = clearcolor->a;
-
-   rect.rect.offset.x                     = 0;
-   rect.rect.offset.y                     = 0;
-   rect.rect.extent.width                 = vk->context->swapchain_width;
-   rect.rect.extent.height                = vk->context->swapchain_height;
-   rect.baseArrayLayer                    = 0;
-   rect.layerCount                        = 1;
-
-   vkCmdClearAttachments(vk->cmd, 1, &attachment, 1, &rect);
 }
 
 static void gfx_display_vk_blend_begin(void *data)
@@ -377,12 +330,13 @@ static void gfx_display_vk_scissor_end(void *data,
 
 gfx_display_ctx_driver_t gfx_display_ctx_vulkan = {
    gfx_display_vk_draw,
+#ifdef HAVE_SHADERPIPELINE
    gfx_display_vk_draw_pipeline,
-   gfx_display_vk_viewport,
+#else
+   NULL,                                  /* draw_pipeline */
+#endif
    gfx_display_vk_blend_begin,
    gfx_display_vk_blend_end,
-   gfx_display_vk_restore_clear_color,
-   gfx_display_vk_clear_color,
    gfx_display_vk_get_default_mvp,
    gfx_display_vk_get_default_vertices,
    gfx_display_vk_get_default_tex_coords,

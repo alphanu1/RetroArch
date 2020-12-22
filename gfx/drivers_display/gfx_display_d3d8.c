@@ -74,7 +74,7 @@ static INT32 gfx_display_prim_to_d3d8_enum(
          break;
    }
 
-   /* TOD/FIXME - hack */
+   /* TODO/FIXME - hack */
    return 0;
 }
 
@@ -97,8 +97,6 @@ static void gfx_display_d3d8_blend_end(void *data)
 
    d3d8_disable_blend_func(d3d->dev);
 }
-
-static void gfx_display_d3d8_viewport(gfx_display_ctx_draw_t *draw, void *data) { }
 
 static void gfx_display_d3d8_bind_texture(gfx_display_ctx_draw_t *draw,
       d3d8_video_t *d3d)
@@ -220,29 +218,6 @@ static void gfx_display_d3d8_draw(gfx_display_ctx_draw_t *draw,
    d3d->menu_display.offset += draw->coords->vertices;
 }
 
-static void gfx_display_d3d8_draw_pipeline(gfx_display_ctx_draw_t *draw,
-      void *data, unsigned video_width, unsigned video_height) { }
-static void gfx_display_d3d8_restore_clear_color(void) { }
-
-static void gfx_display_d3d8_clear_color(
-      gfx_display_ctx_clearcolor_t *clearcolor, void *data)
-{
-   DWORD    clear_color  = 0;
-   d3d8_video_t     *d3d = (d3d8_video_t*)data;
-
-   if (!d3d || !clearcolor)
-      return;
-
-   clear_color = D3DCOLOR_ARGB(
-         BYTE_CLAMP(clearcolor->a * 255.0f), /* A */
-         BYTE_CLAMP(clearcolor->r * 255.0f), /* R */
-         BYTE_CLAMP(clearcolor->g * 255.0f), /* G */
-         BYTE_CLAMP(clearcolor->b * 255.0f)  /* B */
-         );
-
-   d3d8_clear(d3d->dev, 0, NULL, D3D_COMM_CLEAR_TARGET, clear_color, 0, 0);
-}
-
 static bool gfx_display_d3d8_font_init_first(
       void **font_handle, void *video_data,
       const char *font_path, float font_size,
@@ -259,12 +234,9 @@ static bool gfx_display_d3d8_font_init_first(
 
 gfx_display_ctx_driver_t gfx_display_ctx_d3d8 = {
    gfx_display_d3d8_draw,
-   gfx_display_d3d8_draw_pipeline,
-   gfx_display_d3d8_viewport,
+   NULL,                                        /* draw_pipeline */
    gfx_display_d3d8_blend_begin,
    gfx_display_d3d8_blend_end,
-   gfx_display_d3d8_restore_clear_color,
-   gfx_display_d3d8_clear_color,
    gfx_display_d3d8_get_default_mvp,
    gfx_display_d3d8_get_default_vertices,
    gfx_display_d3d8_get_default_tex_coords,

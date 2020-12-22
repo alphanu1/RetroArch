@@ -67,16 +67,16 @@
 #endif
 
 #ifdef HAVE_SAPI
-static ISpVoice* pVoice = NULL;
+static ISpVoice* pVoice        = NULL;
 #endif
 #ifdef HAVE_NVDA
-bool USE_POWERSHELL     = false;
-bool USE_NVDA           = true;
+static bool USE_POWERSHELL     = false;
+static bool USE_NVDA           = true;
 #else
-bool USE_POWERSHELL     = true;
-bool USE_NVDA           = false;
+static bool USE_POWERSHELL     = true;
+static bool USE_NVDA           = false;
 #endif
-bool USE_NVDA_BRAILLE   = false;
+static bool USE_NVDA_BRAILLE   = false;
 
 #ifndef SM_SERVERR2
 #define SM_SERVERR2 89
@@ -330,36 +330,36 @@ static void frontend_win32_get_os(char *s, size_t len, int *major, int *minor)
    {
       case 10:
          if (server)
-            strlcpy(s, "Windows Server 2016", len);
+            strcpy_literal(s, "Windows Server 2016");
          else
-            strlcpy(s, "Windows 10", len);
+            strcpy_literal(s, "Windows 10");
          break;
       case 6:
          switch (vi.dwMinorVersion)
          {
             case 3:
                if (server)
-                  strlcpy(s, "Windows Server 2012 R2", len);
+                  strcpy_literal(s, "Windows Server 2012 R2");
                else
-                  strlcpy(s, "Windows 8.1", len);
+                  strcpy_literal(s, "Windows 8.1");
                break;
             case 2:
                if (server)
-                  strlcpy(s, "Windows Server 2012", len);
+                  strcpy_literal(s, "Windows Server 2012");
                else
-                  strlcpy(s, "Windows 8", len);
+                  strcpy_literal(s, "Windows 8");
                break;
             case 1:
                if (server)
-                  strlcpy(s, "Windows Server 2008 R2", len);
+                  strcpy_literal(s, "Windows Server 2008 R2");
                else
-                  strlcpy(s, "Windows 7", len);
+                  strcpy_literal(s, "Windows 7");
                break;
             case 0:
                if (server)
-                  strlcpy(s, "Windows Server 2008", len);
+                  strcpy_literal(s, "Windows Server 2008");
                else
-                  strlcpy(s, "Windows Vista", len);
+                  strcpy_literal(s, "Windows Vista");
                break;
             default:
                break;
@@ -371,7 +371,7 @@ static void frontend_win32_get_os(char *s, size_t len, int *major, int *minor)
             case 2:
                if (server)
                {
-                  strlcpy(s, "Windows Server 2003", len);
+                  strcpy_literal(s, "Windows Server 2003");
                   if (GetSystemMetrics(SM_SERVERR2))
                      strlcat(s, " R2", len);
                }
@@ -379,14 +379,14 @@ static void frontend_win32_get_os(char *s, size_t len, int *major, int *minor)
                {
                   /* Yes, XP Pro x64 is a higher version number than XP x86 */
                   if (string_is_equal(arch, "x64"))
-                     strlcpy(s, "Windows XP", len);
+                     strcpy_literal(s, "Windows XP");
                }
                break;
             case 1:
-               strlcpy(s, "Windows XP", len);
+               strcpy_literal(s, "Windows XP");
                break;
             case 0:
-               strlcpy(s, "Windows 2000", len);
+               strcpy_literal(s, "Windows 2000");
                break;
          }
          break;
@@ -395,17 +395,17 @@ static void frontend_win32_get_os(char *s, size_t len, int *major, int *minor)
          {
             case 0:
                if (vi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-                  strlcpy(s, "Windows 95", len);
+                  strcpy_literal(s, "Windows 95");
                else if (vi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-                  strlcpy(s, "Windows NT 4.0", len);
+                  strcpy_literal(s, "Windows NT 4.0");
                else
-                  strlcpy(s, "Unknown", len);
+                  strcpy_literal(s, "Unknown");
                break;
             case 90:
-               strlcpy(s, "Windows ME", len);
+               strcpy_literal(s, "Windows ME");
                break;
             case 10:
-               strlcpy(s, "Windows 98", len);
+               strcpy_literal(s, "Windows 98");
                break;
          }
          break;
@@ -568,6 +568,11 @@ static int frontend_win32_parse_drive_list(void *data, bool load_content)
 static void frontend_win32_environment_get(int *argc, char *argv[],
       void *args, void *params_data)
 {
+   const char *tmp_dir = getenv("TMP");
+   if (!string_is_empty(tmp_dir))
+      fill_pathname_expand_special(g_defaults.dirs[DEFAULT_DIR_CACHE],
+         tmp_dir, sizeof(g_defaults.dirs[DEFAULT_DIR_CACHE]));
+
    gfx_set_dwm();
 
    fill_pathname_expand_special(g_defaults.dirs[DEFAULT_DIR_ASSETS],
@@ -622,6 +627,10 @@ static void frontend_win32_environment_get(int *argc, char *argv[],
       ":\\system", sizeof(g_defaults.dirs[DEFAULT_DIR_SYSTEM]));
    fill_pathname_expand_special(g_defaults.dirs[DEFAULT_DIR_LOGS],
       ":\\logs", sizeof(g_defaults.dirs[DEFAULT_DIR_LOGS]));
+
+#ifndef IS_SALAMANDER
+   dir_check_defaults("custom.ini");
+#endif
 }
 
 static uint64_t frontend_win32_get_total_mem(void)
@@ -1136,6 +1145,8 @@ frontend_ctx_driver_t frontend_ctx_win32 = {
    NULL,                            /* destroy_sighandler_state */
    frontend_win32_attach_console,   /* attach_console */
    frontend_win32_detach_console,   /* detach_console */
+   NULL,                            /* get_lakka_version */
+   NULL,                            /* set_screen_brightness */
    NULL,                            /* watch_path_for_changes */
    NULL,                            /* check_for_path_changes */
    NULL,                            /* set_sustained_performance_mode */

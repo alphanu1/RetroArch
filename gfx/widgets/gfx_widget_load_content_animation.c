@@ -50,6 +50,7 @@ enum gfx_widget_load_content_animation_status
 
 struct gfx_widget_load_content_animation_state
 {
+   gfx_display_t *p_disp;
    uintptr_t icon_texture;
    unsigned bg_shadow_height;
    unsigned margin_shadow_width;
@@ -105,7 +106,7 @@ struct gfx_widget_load_content_animation_state
 typedef struct gfx_widget_load_content_animation_state gfx_widget_load_content_animation_state_t;
 
 static gfx_widget_load_content_animation_state_t p_w_load_content_animation_st = {
-
+   NULL,                               /* p_disp */
    0,                                  /* icon_texture */
    0,                                  /* bg_shadow_height */
    0,                                  /* margin_shadow_width */
@@ -158,21 +159,17 @@ static gfx_widget_load_content_animation_state_t p_w_load_content_animation_st =
    false                               /* has_icon */
 };
 
-gfx_widget_load_content_animation_state_t *gfx_widget_load_content_animation_get_ptr(void)
-{
-   return &p_w_load_content_animation_st;
-}
-
 /* Utilities */
 
 static void gfx_widget_load_content_animation_reset(void)
 {
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
    uintptr_t alpha_tag                              = (uintptr_t)&state->alpha;
    uintptr_t slide_offset_tag                       = (uintptr_t)&state->slide_offset;
+   uintptr_t timer_tag                              = (uintptr_t)&state->timer;
 
    /* Kill any existing timers/animations */
-   gfx_timer_kill(&state->timer);
+   gfx_animation_kill_by_tag(&timer_tag);
    gfx_animation_kill_by_tag(&alpha_tag);
    gfx_animation_kill_by_tag(&slide_offset_tag);
 
@@ -197,7 +194,7 @@ static void gfx_widget_load_content_animation_reset(void)
 
 static void gfx_widget_load_content_animation_load_icon(void)
 {
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
 
    /* In all cases, unload any existing icon texture */
    if (state->icon_texture)
@@ -253,7 +250,7 @@ static void gfx_widget_load_content_animation_slide_cb(void *userdata)
    timer.cb       = gfx_widget_load_content_animation_wait_cb;
    timer.userdata = state;
 
-   gfx_timer_start(&state->timer, &timer);
+   gfx_animation_timer_start(&state->timer, &timer);
    state->status = GFX_WIDGET_LOAD_CONTENT_WAIT;
 }
 
@@ -282,7 +279,7 @@ static void gfx_widget_load_content_animation_fade_in_cb(void *userdata)
 
 bool gfx_widget_start_load_content_animation(void)
 {
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
 
    const char *content_path                         = path_get(RARCH_PATH_CONTENT);
    const char *core_path                            = path_get(RARCH_PATH_CORE);
@@ -437,8 +434,7 @@ bool gfx_widget_start_load_content_animation(void)
                sizeof(state->system_name));
       /* Otherwise, just use 'RetroArch' as a fallback */
       else
-         strlcpy(state->system_name, "RetroArch",
-               sizeof(state->system_name));
+         strcpy_literal(state->system_name, "RetroArch");
    }
 
    /* > Content name has been determined
@@ -503,8 +499,7 @@ bool gfx_widget_start_load_content_animation(void)
       state->icon_file[0] = '\0';
       icon_path[0]        = '\0';
 
-      strlcpy(state->icon_file, "retroarch.png",
-            sizeof(state->icon_file));
+      strcpy_literal(state->icon_file, "retroarch.png");
 
       fill_pathname_join(icon_path,
             state->icon_directory, state->icon_file,
@@ -527,14 +522,14 @@ static void gfx_widget_load_content_animation_layout(
       bool is_threaded, const char *dir_assets, char *font_path)
 {
    dispgfx_widget_t *p_dispwidget                   = (dispgfx_widget_t*)data;
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
 
-   unsigned last_video_width                        = gfx_widgets_get_last_video_width(p_dispwidget);
-   unsigned last_video_height                       = gfx_widgets_get_last_video_height(p_dispwidget);
-   unsigned widget_padding                          = gfx_widgets_get_padding(p_dispwidget);
+   unsigned last_video_width                        = p_dispwidget->last_video_width;
+   unsigned last_video_height                       = p_dispwidget->last_video_height;
+   unsigned widget_padding                          = p_dispwidget->simple_widget_padding;
 
-   gfx_widget_font_data_t *font_regular             = gfx_widgets_get_font_regular(p_dispwidget);
-   gfx_widget_font_data_t *font_bold                = gfx_widgets_get_font_bold(p_dispwidget);
+   gfx_widget_font_data_t *font_regular             = &p_dispwidget->gfx_widget_fonts.regular;
+   gfx_widget_font_data_t *font_bold                = &p_dispwidget->gfx_widget_fonts.bold;
 
    /* Icon layout */
    state->icon_size = (unsigned)((((float)font_regular->line_height +
@@ -580,17 +575,15 @@ static void gfx_widget_load_content_animation_iterate(void *user_data,
       const char *dir_assets, char *font_path,
       bool is_threaded)
 {
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
 
    if (state->status == GFX_WIDGET_LOAD_CONTENT_BEGIN)
    {
       dispgfx_widget_t *p_dispwidget       = (dispgfx_widget_t*)user_data;
-
-      unsigned last_video_width            = gfx_widgets_get_last_video_width(p_dispwidget);
-      unsigned widget_padding              = gfx_widgets_get_padding(p_dispwidget);
-
-      gfx_widget_font_data_t *font_regular = gfx_widgets_get_font_regular(p_dispwidget);
-      gfx_widget_font_data_t *font_bold    = gfx_widgets_get_font_bold(p_dispwidget);
+      unsigned last_video_width            = p_dispwidget->last_video_width;
+      unsigned widget_padding              = p_dispwidget->simple_widget_padding;
+      gfx_widget_font_data_t *font_regular = &p_dispwidget->gfx_widget_fonts.regular;
+      gfx_widget_font_data_t *font_bold    = &p_dispwidget->gfx_widget_fonts.bold;
 
       uintptr_t alpha_tag                  = (uintptr_t)&state->alpha;
 
@@ -648,10 +641,16 @@ static void gfx_widget_load_content_animation_iterate(void *user_data,
 
 static void gfx_widget_load_content_animation_frame(void *data, void *user_data)
 {
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
 
    if (state->status != GFX_WIDGET_LOAD_CONTENT_IDLE)
    {
+      float bg_alpha;
+      float icon_alpha;
+      float text_alpha;
+
+      float icon_x;
+      float text_x;
       video_frame_info_t *video_info       = (video_frame_info_t*)data;
       dispgfx_widget_t *p_dispwidget       = (dispgfx_widget_t*)user_data;
 
@@ -659,16 +658,11 @@ static void gfx_widget_load_content_animation_frame(void *data, void *user_data)
       unsigned video_height                = video_info->height;
       void *userdata                       = video_info->userdata;
 
-      gfx_widget_font_data_t *font_regular = gfx_widgets_get_font_regular(p_dispwidget);
-      gfx_widget_font_data_t *font_bold    = gfx_widgets_get_font_bold(p_dispwidget);
-      size_t msg_queue_size                = gfx_widgets_get_msg_queue_size(p_dispwidget);
-
-      float bg_alpha;
-      float icon_alpha;
-      float text_alpha;
-
-      float icon_x;
-      float text_x;
+      gfx_widget_font_data_t *font_regular = &p_dispwidget->gfx_widget_fonts.regular;
+      gfx_widget_font_data_t *font_bold    = &p_dispwidget->gfx_widget_fonts.bold;
+      size_t msg_queue_size                = p_dispwidget->current_msgs_size;
+      gfx_display_t            *p_disp     = state->p_disp;
+      gfx_display_ctx_driver_t *dispctx    = p_disp->dispctx;
 
 #ifdef HAVE_MENU
       /* Draw nothing if menu is currently active */
@@ -794,10 +788,12 @@ static void gfx_widget_load_content_animation_frame(void *data, void *user_data)
 
          if (state->icon_texture)
          {
-            gfx_display_blend_begin(userdata);
+            if (dispctx && dispctx->blend_begin)
+               dispctx->blend_begin(userdata);
 
             gfx_widgets_draw_icon(
                   userdata,
+                  p_disp,
                   video_width,
                   video_height,
                   state->icon_size,
@@ -809,7 +805,8 @@ static void gfx_widget_load_content_animation_frame(void *data, void *user_data)
                   1.0f,
                   state->icon_color);
 
-            gfx_display_blend_end(userdata);
+            if (dispctx && dispctx->blend_end)
+               dispctx->blend_end(userdata);
          }
          /* If there is no icon, draw a placeholder
           * (otherwise layout will look terrible...) */
@@ -934,7 +931,7 @@ static void gfx_widget_load_content_animation_context_reset(
       char* menu_png_path,
       char* widgets_png_path)
 {
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
 
    /* Cache icon directory */
    if (string_is_empty(menu_png_path))
@@ -951,7 +948,7 @@ static void gfx_widget_load_content_animation_context_reset(
 
 static void gfx_widget_load_content_animation_context_destroy(void)
 {
-   gfx_widget_load_content_animation_state_t *state = gfx_widget_load_content_animation_get_ptr();
+   gfx_widget_load_content_animation_state_t *state = &p_w_load_content_animation_st;
 
    /* Unload any icon texture */
    if (state->icon_texture)
@@ -968,10 +965,20 @@ static void gfx_widget_load_content_animation_free(void)
    gfx_widget_load_content_animation_reset();
 }
 
+static bool gfx_widget_load_content_animation_init(
+      bool video_is_threaded, bool fullscreen)
+{
+   gfx_widget_load_content_animation_state_t *state = 
+      &p_w_load_content_animation_st;
+
+   state->p_disp = disp_get_ptr();
+
+   return false;
+}
 /* Widget definition */
 
 const gfx_widget_t gfx_widget_load_content_animation = {
-   NULL, /* init */
+   gfx_widget_load_content_animation_init,
    gfx_widget_load_content_animation_free,
    gfx_widget_load_content_animation_context_reset,
    gfx_widget_load_content_animation_context_destroy,
