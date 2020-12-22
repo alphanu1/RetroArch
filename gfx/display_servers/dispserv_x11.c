@@ -47,7 +47,7 @@
 #include "../video_crt_switch.h" /* needed to set aspect for low res in linux */
 #define LIBSWR "libswitchres.so"
 
-#include <switchres_wrapper.h>
+#include "/usr/include/switchres/switchres_wrapper.h"
 
 typedef struct
 {
