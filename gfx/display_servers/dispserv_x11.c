@@ -103,7 +103,7 @@ static bool x11_display_server_set_resolution(void *data,
    if (!dlp) {
       printf("Loading %s failed.\n", LIBSWR);
       printf("Error: %s\n", LIBERROR());
-      exit(EXIT_FAILURE);
+      //exit(EXIT_FAILURE);
    }
 
    printf("Loading %s succeded.\n", LIBSWR);
@@ -113,7 +113,7 @@ static bool x11_display_server_set_resolution(void *data,
    if ((err_msg = LIBERROR()) != NULL) {
       printf("Failed to load srAPI: %s\n", err_msg);
       CLOSELIB(dlp);
-      exit(EXIT_FAILURE);
+      //exit(EXIT_FAILURE);
    }
 
 	printf("Init a new switchres_manager object:\n");
@@ -126,7 +126,7 @@ static bool x11_display_server_set_resolution(void *data,
 	{
 		printf("ERROR: couldn't add the required mode. Exiting!\n");
 		SRobj->deinit();
-		exit(1);
+		//exit(1);
 	}
 	printf("Got resolution: %dx%d%c@%f\n", srm.width, srm.height, srm.interlace, srm.refresh);
 
@@ -135,7 +135,7 @@ static bool x11_display_server_set_resolution(void *data,
 	{
 		printf("ERROR: couldn't switch to the required mode. Exiting!\n");
 		SRobj->deinit();
-		exit(1);
+		//exit(1);
 	}
 
    SRobj->deinit();
